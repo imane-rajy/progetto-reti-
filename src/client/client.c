@@ -13,38 +13,32 @@
 #define SERVER_PORT 5678
 
 int client_sock;
-volatile int running = 1;
 
-pthread_mutex_t running_mtx = PTHREAD_MUTEX_INITIALIZER;
+volatile int running = 1;
 
 void* listener_thread(void* arg) {
     char buffer[BUFFER_SIZE];
 
     while (running) {
-        int n = recv(client_sock, buffer, sizeof(buffer)-1, 0);
-        if (n <= 0) {
-            printf("Connessione chiusa dal server\n");
-            running = 0;
-            break;
-        }
+			// effettua il ciclo della card:
+			// - ottieni card dal server
+			// - aspetta
+			// - ottieni lista client
+			// - richiedi review ad ogni client
+			// - fai ack della card
+		}
 
-        buffer[n] = '\0';
-        printf("\n[SERVER]: %s\n", buffer);
-        printf("Inserisci il messaggio da inviare al server: ");
-        fflush(stdout);
-    }
     return NULL;
 }
-
-
 
 void* console_thread(void* arg) {
     char buffer[BUFFER_SIZE];
 
     while (running) {
-        if (fgets(buffer, sizeof(buffer), stdin) == NULL)
-            continue;
+				printf("$ ");
+				fflush(stdout);
 
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL) continue;
         buffer[strcspn(buffer, "\n")] = '\0';
 
         if (send(client_sock, buffer, strlen(buffer), 0) < 0) {
@@ -52,12 +46,8 @@ void* console_thread(void* arg) {
             running = 0;
             break;
         }
-
-        if (strcmp(buffer, "QUIT") == 0) {
-            running = 0;
-            break;
-        }
     }
+
     return NULL;
 }
 
@@ -114,36 +104,19 @@ int main(int argc, char* argv[]) {
         perror("Connessione fallita");
         return -1;
     }
-  
-		// entra in un ciclo di esecuzione di comandi
-    /*
-		while(1) {
-        printf("Inserisci il messaggio da inviare al server: ");
-    
-				char buffer[BUFFER_SIZE] = {0};
-        if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
-        		printf("Errore nella lettura dell'input\n");
-            close(client_sock);
-            return -1;
-        }
-        buffer[strcspn(buffer, "\n")] = '\0'; // rimuove il newline
 
-        // invio il comando al server
-        if (send(client_sock, buffer, strlen(buffer), 0) < 0) {
-            perror("Errore nella send");
-            close(client_sock);
-            return -1;
-        }
-
-        printf("Messaggio inviato al server: %s\n", buffer);
-		}
-    */
+		// inizializza thread
     pthread_t t_listener, t_console;
-    pthread_mutex_t m
-    pthread_create(&t_listener, NULL, listener_thread, NULL);
+    
+		// thread di ascolto, gestisce il ciclo delle card
+		pthread_create(&t_listener, NULL, listener_thread, NULL);
+
+		// thread console, gestisce i comandi da tastiera
     pthread_create(&t_console, NULL, console_thread, NULL);
 
     pthread_join(t_listener, NULL);
+    pthread_join(t_console, NULL);
     close(client_sock);
+
     return 0;
 }
