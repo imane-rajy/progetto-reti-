@@ -12,20 +12,61 @@
 
 #define SERVER_ADDR "127.0.0.1"
 #define SERVER_PORT 5678
-
+srand(time(NULL));
 int client_sock;
+
 pthread_mutex_t client_sock_m;
 
 volatile int running = 1;
 
-void *listener_thread(void *arg) {
+void get_card(){
+
     char buffer[BUFFER_SIZE];
+    Command cmd = {0};
+    if(recv_command(&cmd, buffer, client_sock, &client_sock_m) < 0 ){
+        perror("Errore nella receive");
+        running = 0;
+        break;
+    }
+
+    if(cmd.type == HANDLE_CARD && cmd.args){
+        
+    }
+}
+
+void *listener_thread(void *arg) {
+   
 
     while (running) {
         // effettua il ciclo della card:
         // - ottieni card dal server
+        Command cmd = {0};
+        get_card();
+        if(recv_command(&cmd, buffer, client_sock, &client_sock_m) < 0 ){
+            perror("Errore nella receive");
+            running = 0;
+            break;
+        }
+
+        
         // - aspetta
+        int n = rand() % 30;
+        sleep(n);
         // - ottieni lista client
+        Command cmd = { .type = REQUEST_USER_LIST};
+        if (send_command(&cmd, client_sock, &client_sock_m) < 0) {
+            perror("Errore nella send");
+            running = 0;
+            break;
+        }
+
+        if (recv_command(&cmd, buffer, client_sock, &client_sock_m) < 0) {
+            perror("Errore nella receive");
+            running = 0;
+            break;
+        }
+
+        printf()
         // - richiedi review ad ogni client
         // - fai ack della card
     }
