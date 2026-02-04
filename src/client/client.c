@@ -16,6 +16,9 @@ int client_sock;
 
 volatile int running = 1;
 
+pthread_mutex_t m;
+pthread_mutex_init(&m, NULL);
+
 void* listener_thread(void* arg) {
     char buffer[BUFFER_SIZE];
 
@@ -41,11 +44,20 @@ void* console_thread(void* arg) {
         if (fgets(buffer, sizeof(buffer), stdin) == NULL) continue;
         buffer[strcspn(buffer, "\n")] = '\0';
 
-        if (send(client_sock, buffer, strlen(buffer), 0) < 0) {
+        Command cmd = {0};
+        buf_to_cmd(buffer, &cmd);
+        
+        if (send_command(cmd, client_sock, &m) < 0) {
             perror("Errore nella send");
             running = 0;
             break;
         }
+
+        //if (send(client_sock, buffer, strlen(buffer), 0) < 0) {
+        //    perror("Errore nella send");
+        //    running = 0;
+        //    break;
+        //}
     }
 
     return NULL;
@@ -63,7 +75,6 @@ int main(int argc, char* argv[]) {
     unsigned short port = atoi(argv[1]);
     
 		// crea socket
-    int client_sock;
     if ((client_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Errore nella creazione del socket");
         return -1;
