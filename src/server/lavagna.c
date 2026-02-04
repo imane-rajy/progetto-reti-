@@ -9,7 +9,7 @@ Card cards[MAX_CARDS] = {0};
 int num_card = 0;
 
 int create_card(int id, const char* colonna, const char* testo ){
-    for(int i=0; i<MAX_CARDS; i++){
+    for(int i = 0; i < MAX_CARDS; i++){
         if(cards[i].id == id){
             return -1;
         }
@@ -35,15 +35,14 @@ int create_card(int id, const char* colonna, const char* testo ){
         return -3;
     }
 
-    strncpy(cards[idx].testo, testo, MAX_TESTO-1);
-    cards[idx].testo[MAX_TESTO-1] = '\0';
+    strncpy(cards[idx].testo, testo, MAX_TESTO - 1);
+    cards[idx].testo[MAX_TESTO - 1] = '\0';
     cards[idx].utente = -1;
 
     num_card++;
 
     return idx;
-
-} 
+}
 
 void mostra_lavagna() {
     printf("\n| %-*s | %-*s | %-*s |\n",
@@ -68,7 +67,6 @@ void mostra_lavagna() {
         else if (cards[i].colonna == 1) doing[nDoing++] = cards[i];
         else done[nDone++] = cards[i];
     }
-
     
     int maxRows = nToDo;
     if (nDoing > maxRows) {
@@ -125,39 +123,40 @@ void mostra_lavagna() {
     }
 }
 
-void gestisci_comando(char* buffer, unsigned short port){
-	printf("Sono gestisci_comando(), buffer=%s, int=%d\n", buffer, port);
-
-    cmd* cm;
-    get_command_type(buffer, &cm);
+void gestisci_comando(const Command* cmd, unsigned short port) {
+		printf("Ho ottenuto il comando %d con %d argomenti da %d\n", cmd->type, get_argc(cmd), port);
+		return;
 
     switch(cm->type){
         case CREATE_CARD:
+<<<<<<< HEAD
             if(cm->args)
             create_card();
+=======
+            // create_card();
+>>>>>>> 82e9106b28960627665a79b29c357f925ca551ea
             break;
         case HELLO:
-            hello();
+            // hello();
             break;
         case QUIT:
-            quit();
+            // quit();
             break;
         case PONG_LAVAGNA:
-            pong_lavagna();
+            // pong_lavagna();
             break;
         case ACK_CARD:
-            ack_card();
+            // ack_card();
             break;
         case REQUEST_USER_LIST:
-            request_user_list();
+            // request_user_list();
             break;
         case CARD_DONE:
-            card_done();
+            // card_done();
             break;
         default:
             break;
     }
-	// discrimina sul tipo di comando -> gestori
 }
 
 void init_lavagna(){

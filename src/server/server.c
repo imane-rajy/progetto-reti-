@@ -168,7 +168,9 @@ int main() {
 						}	
 
 						// gestisci comando
-						gestisci_comando(buffer, client_port);
+						Command cmd = {0};
+						buf_to_cmd(buffer, &cmd);
+						gestisci_comando(&cmd, client_port);
 					}
 				}
 		}    

@@ -26,56 +26,23 @@ typedef enum {
   // client -> client
   REVIEW_CARD,
   ACK_REVIEW_CARD
-} cmd_type;
+} CommandType;
 
-/*
- * Macro per il numero di tipi di comando
- */
 #define NUM_CMD_TYPES (ACK_REVIEW_CARD + 1)
 
-/*
- * Ottiene il tipo di comando a partire dalla stringa che rappresenta la parola
- * chiave del comando effettuando una ricerca sulla mappa comandi
- */
-cmd_type str_to_type(const char *keyword);
+CommandType str_to_type(const char *keyword);
+const char *type_to_str(CommandType type);
 
-/*
- * Ottiene la stringa che rappresenta la parola chiave di un comando a partire
- * dal tipo di comando effettuando una ricerca sulla mappa comandi
- */
-const char *type_to_str(cmd_type type);
-
-
-mod_type type_to_mod(cmd_type type);
-
-/*
- * Numero massimo di argomenti per comando
- */
 #define MAX_CMD_ARGS 10
-
-/*
- * Numero massimo di caratteri per un comando (incluso \0)
- */
 #define CMD_BUF_SIZE 256
 
-/*
- * Un comando è rappresentato da:
- * - il suo tipo
- * - i suoi argomenti, come una lista terminata da NULL
- */
 typedef struct {
-  cmd_type type;
+  CommandType type;
   const char *args[MAX_CMD_ARGS];
-} cmd;
+} Command;
 
-typedef struct {
-  cmd_type type;
-  const char *str;
-} cmd_entry;
-
-
-
-
-
+int get_argc(const Command *cm);
+void cmd_to_buf(const Command *cm, char *buf);
+void buf_to_cmd(char *buf, Command *cm);
 
 #endif
