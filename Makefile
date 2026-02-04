@@ -5,7 +5,7 @@ CFLAGS = -Wall -Wextra -Werror -I./src
 SRC_DIR = src
 
 CLIENT_SRC = $(SRC_DIR)/client/client.c 
-SERVER_SRC = $(SRC_DIR)/server/server.c
+SERVER_SRC = $(SRC_DIR)/server/server.c $(SRC_DIR)/server/lavagna.c
 
 CLIENT_OUT = client
 SERVER_OUT = server

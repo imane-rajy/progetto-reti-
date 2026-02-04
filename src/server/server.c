@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
-// #include "lavagna.h"
+#include "lavagna.h"
 
 #define MAX_CLIENTS 30
 #define BUFFER_SIZE 1024
@@ -82,7 +82,7 @@ int main() {
     printf("Server TCP in ascolto sulla porta %d...\n", SERVER_PORT);
 	
 		// inizializza lavagna
-    // init_lavagna();
+    init_lavagna();
 
 		// inizializza multiplexing
 		fd_set master_set, read_set;
@@ -168,8 +168,7 @@ int main() {
 						}	
 
 						// gestisci comando
-						printf("Starei gestendo comando \"%s\" da client %d\n", buffer, client_port);
-						// gestisci_comando(buffer, client_port);
+						gestisci_comando(buffer, client_port);
 					}
 				}
 		}    

@@ -14,11 +14,11 @@ typedef struct {
     struct tm timestamp;
 } Card;
 
-extern Card cards[MAX_CARDS] = {0};
+extern Card cards[MAX_CARDS];
 extern int num_card;
 
 void init_lavagna();
 void mostra_lavagna();
-void gestisci_comando(const char*, int);
+void gestisci_comando(char*, unsigned short);
 
 #endif
