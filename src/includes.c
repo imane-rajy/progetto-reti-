@@ -1,7 +1,7 @@
 #include "includes.h"
-#include <sys/socket.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/socket.h>
 
 typedef struct {
     CommandType type;
@@ -88,29 +88,33 @@ void buf_to_cmd(char *buf, Command *cm) {
 }
 
 int send_command(const Command *cm, int sock, pthread_mutex_t *m) {
-	if(m != NULL) pthread_mutex_lock(m);
-	
-	// metti comando su buffer
+    if (m != NULL)
+        pthread_mutex_lock(m);
+
+    // metti comando su buffer
     char buf[CMD_BUF_SIZE];
     cmd_to_buf(cm, buf);
 
-	// invia buffer
+    // invia buffer
     int ret = send(sock, &buf, strlen(buf), 0);
-    
-	if(m != NULL) pthread_mutex_unlock(m);
-    
-	return ret;
+
+    if (m != NULL)
+        pthread_mutex_unlock(m);
+
+    return ret;
 }
 
 int recv_command(Command *cm, char *buf, int sock, pthread_mutex_t *m) {
-	if(m != NULL) pthread_mutex_lock(m);
-	
-	// prendi buffer
+    if (m != NULL)
+        pthread_mutex_lock(m);
+
+    // prendi buffer
     int ret = recv(sock, buf, sizeof(buf), 0);
 
-	// scrivi comando da buffer
+    // scrivi comando da buffer
     buf_to_cmd(buf, cm);
-	
-	if(m != NULL) pthread_mutex_unlock(m);
+
+    if (m != NULL)
+        pthread_mutex_unlock(m);
     return ret;
 }

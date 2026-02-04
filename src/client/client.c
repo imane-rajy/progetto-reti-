@@ -95,8 +95,7 @@ int main(int argc, char *argv[]) {
     }
 
     // collega ad indirizzo client
-    if (bind(client_sock, (struct sockaddr *)&client_addr,
-             sizeof(client_addr)) < 0) {
+    if (bind(client_sock, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0) {
         perror("Errore nella bind");
         return -1;
     }
@@ -112,8 +111,7 @@ int main(int argc, char *argv[]) {
     }
 
     // connetti al server
-    if (connect(client_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) <
-        0) {
+    if (connect(client_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         perror("Connessione fallita");
         return -1;
     }

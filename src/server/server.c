@@ -71,8 +71,7 @@ int main() {
     serv_addr.sin_port = htons(SERVER_PORT);
 
     // collega ad indirizzo server
-    if (bind(listen_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) <
-        0) {
+    if (bind(listen_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         perror("Errore nella bind");
         return -1;
     }
@@ -121,8 +120,7 @@ int main() {
                 // accetta nuovo client
                 struct sockaddr_in client_addr;
                 socklen_t client_len = sizeof(client_addr);
-                int client_sock = accept(
-                    listen_sock, (struct sockaddr *)&client_addr, &client_len);
+                int client_sock = accept(listen_sock, (struct sockaddr *)&client_addr, &client_len);
                 if (client_sock < 0) {
                     perror("Errore durante la accept");
                     continue;

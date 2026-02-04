@@ -80,27 +80,27 @@ void mostra_lavagna() {
         for (int l = 0; l < 2; l++) {
             for (int c = 0; c < NUM_COLS; c++) {
                 if (row < col_index[c]) {
-                    // card da stampare
                     Card *card = col_cards[c][row];
+                    char buf[COL_WIDTH + 1];
 
                     switch (l) {
+                    // colonna 0: testo
                     case 0:
-                        printf("%-*s", COL_WIDTH, card->testo);
+                        snprintf(buf, COL_WIDTH + 1, "%s", card->testo);
+                        printf("%-*s", COL_WIDTH, buf);
                         break;
+
+                    // colonna 1: altri dati
                     case 1:
-                        printf("ID: %d | User: %d | Time: %02d-%02d-%04d "
-                               "%02d:%02d:%02d",
-                               card->id, card->utente, card->timestamp.tm_mday,
-                               card->timestamp.tm_mon + 1,
-                               card->timestamp.tm_year + 1900,
-                               card->timestamp.tm_hour, card->timestamp.tm_min,
-                               card->timestamp.tm_sec);
+                        snprintf(buf, COL_WIDTH + 1, "ID: %d Client: %d Data: %02d-%02d-%04d %02d:%02d:%02d", card->id, card->utente, card->timestamp.tm_mday, card->timestamp.tm_mon + 1, card->timestamp.tm_year + 1900, card->timestamp.tm_hour, card->timestamp.tm_min, card->timestamp.tm_sec);
+                        printf("%-*s", COL_WIDTH, buf);
                         break;
                     }
                 } else {
                     printf("%-*s", COL_WIDTH, ""); // vuoto
                 }
             }
+
             printf("\n");
         }
     }
