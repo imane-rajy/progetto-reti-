@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #define BUFFER_SIZE 1024
 
@@ -10,6 +11,56 @@
 
 #define SERVER_ADDR "127.0.0.1"
 #define SERVER_PORT 5678
+
+int client_sock;
+volatile int running = 1;
+
+pthread_mutex_t running_mtx = PTHREAD_MUTEX_INITIALIZER;
+
+void* listener_thread(void* arg) {
+    char buffer[BUFFER_SIZE];
+
+    while (running) {
+        int n = recv(client_sock, buffer, sizeof(buffer)-1, 0);
+        if (n <= 0) {
+            printf("Connessione chiusa dal server\n");
+            running = 0;
+            break;
+        }
+
+        buffer[n] = '\0';
+        printf("\n[SERVER]: %s\n", buffer);
+        printf("Inserisci il messaggio da inviare al server: ");
+        fflush(stdout);
+    }
+    return NULL;
+}
+
+
+
+void* console_thread(void* arg) {
+    char buffer[BUFFER_SIZE];
+
+    while (running) {
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL)
+            continue;
+
+        buffer[strcspn(buffer, "\n")] = '\0';
+
+        if (send(client_sock, buffer, strlen(buffer), 0) < 0) {
+            perror("Errore nella send");
+            running = 0;
+            break;
+        }
+
+        if (strcmp(buffer, "QUIT") == 0) {
+            running = 0;
+            break;
+        }
+    }
+    return NULL;
+}
+
 
 int main(int argc, char* argv[]) {
 		// prendi argomenti
@@ -65,6 +116,7 @@ int main(int argc, char* argv[]) {
     }
    
 		// entra in un ciclo di esecuzione di comandi
+    /*
     while(1){
         printf("Inserisci il messaggio da inviare al server: ");
     
@@ -85,7 +137,13 @@ int main(int argc, char* argv[]) {
 
         printf("Messaggio inviato al server: %s\n", buffer);
 		}
+    */
+    pthread_t t_listener, t_console;
+    pthread_mutex_t m
+    pthread_create(&t_listener, NULL, listener_thread, NULL);
+    pthread_create(&t_console, NULL, console_thread, NULL);
 
+    pthread_join(t_listener, NULL);
     close(client_sock);
     return 0;
 }

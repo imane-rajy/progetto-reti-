@@ -1,4 +1,5 @@
 #include "lavagna.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -130,8 +131,9 @@ void gestisci_comando(char* buffer, unsigned short port){
     cmd* cm;
     get_command_type(buffer, &cm);
 
-    switch(cmd->type){
+    switch(cm->type){
         case CREATE_CARD:
+            if(cm->args)
             create_card();
             break;
         case HELLO:
