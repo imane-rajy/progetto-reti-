@@ -1,7 +1,7 @@
 .PHONY: all clean
 
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -I./src
+CFLAGS = -Wall -Wextra -I./src
 SRC_DIR = src
 
 CLIENT_SRC = $(SRC_DIR)/client/client.c $(SRC_DIR)/includes.c

@@ -1,9 +1,10 @@
+#include "../includes.h"
+#include <arpa/inet.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <arpa/inet.h>
-#include <pthread.h>
 
 #define BUFFER_SIZE 1024
 
@@ -13,116 +14,117 @@
 #define SERVER_PORT 5678
 
 int client_sock;
+pthread_mutex_t client_sock_m;
 
 volatile int running = 1;
 
-pthread_mutex_t m;
-pthread_mutex_init(&m, NULL);
-
-void* listener_thread(void* arg) {
+void *listener_thread(void *arg) {
     char buffer[BUFFER_SIZE];
 
     while (running) {
-			// effettua il ciclo della card:
-			// - ottieni card dal server
-			// - aspetta
-			// - ottieni lista client
-			// - richiedi review ad ogni client
-			// - fai ack della card
-		}
+        // effettua il ciclo della card:
+        // - ottieni card dal server
+        // - aspetta
+        // - ottieni lista client
+        // - richiedi review ad ogni client
+        // - fai ack della card
+    }
 
     return NULL;
 }
 
-void* console_thread(void* arg) {
+void *console_thread(void *arg) {
     char buffer[BUFFER_SIZE];
 
     while (running) {
-		printf("$ ");
-		fflush(stdout);
+        printf("$ ");
+        fflush(stdout);
 
-        if (fgets(buffer, sizeof(buffer), stdin) == NULL) continue;
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL)
+            continue;
         buffer[strcspn(buffer, "\n")] = '\0';
 
         Command cmd = {0};
         buf_to_cmd(buffer, &cmd);
-        
-        if (send_command(cmd, client_sock, &m) < 0) {
+
+        if (send_command(&cmd, client_sock, &client_sock_m) < 0) {
             perror("Errore nella send");
             running = 0;
             break;
         }
 
-        //if (send(client_sock, buffer, strlen(buffer), 0) < 0) {
-        //    perror("Errore nella send");
-        //    running = 0;
-        //    break;
-        //}
+        // if (send(client_sock, buffer, strlen(buffer), 0) < 0) {
+        //     perror("Errore nella send");
+        //     running = 0;
+        //     break;
+        // }
     }
 
     return NULL;
 }
 
-
-int main(int argc, char* argv[]) {
-		// prendi argomenti
+int main(int argc, char *argv[]) {
+    // prendi argomenti
     if (argc < 2) {
         printf("Uso: ./client [numero di porta]\n");
         return 1;
     }
-  
-		// prendi porta 
+
+    // prendi porta
     unsigned short port = atoi(argv[1]);
-    
-		// crea socket
+
+    // crea socket
     if ((client_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Errore nella creazione del socket");
         return -1;
     }
-		
-		// rendi il socket di ascolto riutilizzabile (per debugging più veloce)
-		int yes = 1;
-		setsockopt(client_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+    pthread_mutex_init(&client_sock_m, NULL);
 
-		// configura indirizzo client	
-  	struct sockaddr_in client_addr;
+    // rendi il socket di ascolto riutilizzabile (per debugging più veloce)
+    int yes = 1;
+    setsockopt(client_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+
+    // configura indirizzo client
+    struct sockaddr_in client_addr;
     client_addr.sin_family = AF_INET;
     client_addr.sin_port = htons(port);
-  
+
     if (inet_pton(AF_INET, CLIENT_ADDR, &client_addr.sin_addr) <= 0) {
         printf("Indirizzo client non valido\n");
         return -1;
     }
 
-		// collega ad indirizzo client 
-		if(bind(client_sock, (struct sockaddr*)&client_addr, sizeof(client_addr)) < 0) {
-				perror("Errore nella bind");
-				return -1;
-		}
+    // collega ad indirizzo client
+    if (bind(client_sock, (struct sockaddr *)&client_addr,
+             sizeof(client_addr)) < 0) {
+        perror("Errore nella bind");
+        return -1;
+    }
 
-		// configura indirizzo server
+    // configura indirizzo server
     struct sockaddr_in serv_addr;
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(SERVER_PORT);
-  
+
     if (inet_pton(AF_INET, SERVER_ADDR, &serv_addr.sin_addr) <= 0) {
         printf("Indirizzo server non valido\n");
         return -1;
     }
 
-		// connetti al server
-    if (connect(client_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+    // connetti al server
+    if (connect(client_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) <
+        0) {
         perror("Connessione fallita");
         return -1;
     }
 
-	// inizializza thread
+    // inizializza thread
     pthread_t t_listener, t_console;
-    
-	// thread di ascolto, gestisce il ciclo delle card
-	pthread_create(&t_listener, NULL, listener_thread, NULL);
 
-	// thread console, gestisce i comandi da tastiera
+    // thread di ascolto, gestisce il ciclo delle card
+    pthread_create(&t_listener, NULL, listener_thread, NULL);
+
+    // thread console, gestisce i comandi da tastiera
     pthread_create(&t_console, NULL, console_thread, NULL);
 
     pthread_join(t_listener, NULL);

@@ -7,11 +7,7 @@
 #define MAX_CARDS 100
 #define MAX_TESTO 256
 
-typedef enum {
-	TO_DO,
-	DOING,
-	DONE
-} Colonna;
+typedef enum { TO_DO, DOING, DONE } Colonna;
 
 #define NUM_COLS (DONE + 1)
 
@@ -20,9 +16,9 @@ const char *col_to_str(Colonna id);
 
 typedef struct {
     int id;
-    Colonna colonna; 
+    Colonna colonna;
     char testo[MAX_TESTO];
-    int utente; 
+    int utente;
     struct tm timestamp;
 } Card;
 
@@ -31,6 +27,6 @@ extern int num_card;
 
 void init_lavagna();
 void mostra_lavagna();
-void gestisci_comando(const Command*, unsigned short);
+void gestisci_comando(const Command *, unsigned short);
 
 #endif
