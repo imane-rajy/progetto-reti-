@@ -30,7 +30,7 @@ cmd_entry cmd_table[] = {
            // flusso del client
 };
 
-cmd_type get_command_type(char* buf, cmd_type* cm){
+void get_command_type(char* buf, cmd* cm){
     // tokenizza il tipo
     char *token = strtok(buf, " ");
     cm->type = str_to_type(token);
@@ -41,6 +41,7 @@ cmd_type get_command_type(char* buf, cmd_type* cm){
         cm->args[argc++] = token;
     }
 
+    
 }
 
 

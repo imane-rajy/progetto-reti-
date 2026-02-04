@@ -7,7 +7,7 @@
 Card cards[MAX_CARDS] = {0};
 int num_card = 0;
 
-int crea_card(int id, const char* colonna, const char* testo ){
+int create_card(int id, const char* colonna, const char* testo ){
     for(int i=0; i<MAX_CARDS; i++){
         if(cards[i].id == id){
             return -1;
@@ -127,20 +127,48 @@ void mostra_lavagna() {
 void gestisci_comando(char* buffer, unsigned short port){
 	printf("Sono gestisci_comando(), buffer=%s, int=%d\n", buffer, port);
 
+    cmd* cm;
+    get_command_type(buffer, &cm);
+
+    switch(cmd->type){
+        case CREATE_CARD:
+            create_card();
+            break;
+        case HELLO:
+            hello();
+            break;
+        case QUIT:
+            quit();
+            break;
+        case PONG_LAVAGNA:
+            pong_lavagna();
+            break;
+        case ACK_CARD:
+            ack_card();
+            break;
+        case REQUEST_USER_LIST:
+            request_user_list();
+            break;
+        case CARD_DONE:
+            card_done();
+            break;
+        default:
+            break;
+    }
 	// discrimina sul tipo di comando -> gestori
 }
 
 void init_lavagna(){
-    crea_card(1, "ToDo", "Implementare integrazione per il pagamento");
-    crea_card(2, "ToDo", "Implementare sito web servzio");
-    crea_card(3, "ToDo", "Diagramma delle classi UML");
-    crea_card(4, "ToDo", "Studio dei requisiti dell'applicazione");
-    crea_card(5, "ToDo", "Realizzare CRC card");
-    crea_card(6, "ToDo", "Studio dei casi d'uso");
-    crea_card(7, "ToDo", "Realizzazione dei flow of events");
-    crea_card(8, "Doing", "Diagramma di deployment");
-    crea_card(9, "ToDo", "Analisi delle classi");
-    crea_card(10, "ToDo", "Implementare testing del software");
+    create_card(1, "ToDo", "Implementare integrazione per il pagamento");
+    create_card(2, "ToDo", "Implementare sito web servzio");
+    create_card(3, "ToDo", "Diagramma delle classi UML");
+    create_card(4, "ToDo", "Studio dei requisiti dell'applicazione");
+    create_card(5, "ToDo", "Realizzare CRC card");
+    create_card(6, "ToDo", "Studio dei casi d'uso");
+    create_card(7, "ToDo", "Realizzazione dei flow of events");
+    create_card(8, "Doing", "Diagramma di deployment");
+    create_card(9, "ToDo", "Analisi delle classi");
+    create_card(10, "ToDo", "Implementare testing del software");
     mostra_lavagna();
 
 }
