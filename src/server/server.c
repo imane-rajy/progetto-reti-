@@ -1,3 +1,4 @@
+#include "server.h"
 #include "lavagna.h"
 #include <arpa/inet.h>
 #include <stdio.h>
@@ -50,6 +51,24 @@ unsigned short get_port(int sock) {
     }
 
     return 0;
+}
+
+int get_socket(unsigned short port) {
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i].port != port)
+            continue;
+
+        return clients[i].socket;
+    }
+
+    return 0;
+}
+
+void send_client(const Command *cm, unsigned short port) {
+	int sock = get_socket(port);
+	if(sock == 0) return; 
+
+	send_command(cm, sock, NULL);
 }
 
 int main() {

@@ -4,6 +4,7 @@
 #include <pthread.h>
 
 #define MAX_TESTO 256
+#define MAX_CARD_SIZE (MAX_TESTO + 256)
 
 typedef enum { TO_DO, DOING, DONE } Colonna;
 
@@ -19,6 +20,9 @@ typedef struct {
     int utente;
     struct tm timestamp;
 } Card;
+
+void card_to_buf(const Card *c, char *buf);
+void buf_to_card(char *buf, Card *cm);
 
 typedef enum {
     // client -> server

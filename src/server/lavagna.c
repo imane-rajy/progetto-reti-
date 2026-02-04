@@ -7,7 +7,7 @@
 #define MAX_USERS 30
 
 typedef struct {
-	unsigned short id;
+    unsigned short id;
 } User;
 
 User users[MAX_USERS] = {0};
@@ -35,10 +35,11 @@ void rimuovi_user(unsigned short id) {
 
 int controlla_user(unsigned short id) {
     for (int i = 0; i < MAX_USERS; i++) {
-        if (users[i].id == id) return 1;
+        if (users[i].id == id)
+            return 1;
     }
 
-	return 0;
+    return 0;
 }
 
 #define COL_WIDTH 50
@@ -84,81 +85,83 @@ int create_card(int id, Colonna colonna, const char *testo, unsigned short clien
 
     cards[idx].utente = client;
 
-	printf("Creata card %d di client %d\n", id, client);
+    printf("Creata card %d di client %d\n", id, client);
     return idx;
 }
 
 int hello(unsigned short client) {
-	inserisci_user(client);
+    inserisci_user(client);
 
-	printf("Registrato client %d\n", client);
-	return 0;
+    printf("Registrato client %d\n", client);
+    return 0;
 }
 
 int quit(unsigned short client) {
-	rimuovi_user(client);
+    rimuovi_user(client);
 
-	printf("Deregistrato client %d\n", client);
-	return 0;
+    printf("Deregistrato client %d\n", client);
+    return 0;
 }
 
 void gestisci_comando(const Command *cmd, unsigned short port) {
-	mostra_lavagna();
-	
-	if(controlla_user(port) == 0 && cmd->type != HELLO) {
-		printf("Ottenuto comando non HELLO da client non registrato %d\n", port);
-		return;
-	}
+    mostra_lavagna();
+
+    if (controlla_user(port) == 0 && cmd->type != HELLO) {
+        printf("Ottenuto comando non HELLO da client non registrato %d\n", port);
+        return;
+    }
 
     switch (cmd->type) {
-		case CREATE_CARD: {
-			int id = atoi(cmd->args[0]);
-			Colonna colonna = str_to_col(cmd->args[1]);
-			const char *testo = cmd->args[2];
-			unsigned short client = port;
+    case CREATE_CARD: {
+        int id = atoi(cmd->args[0]);
+        Colonna colonna = str_to_col(cmd->args[1]);
+        const char *testo = cmd->args[2];
 
-			create_card(id, colonna, testo, client);
-			break;
-		}
-		case HELLO: {
-			hello(port);
-			break;
-		}
-		case QUIT: {
-			quit(port);
-			break;
-		}
-		case PONG_LAVAGNA: {
-			// pong_lavagna();
-			break;
-		}
-		case ACK_CARD: {
-			// ack_card();
-			break;
-		}
-		case REQUEST_USER_LIST: {
-			// request_user_list();
-			break;
-		}
-		case CARD_DONE: {
-			// card_done();
-			break;
-		}
-		default: break;
-	}
+        unsigned short client = port;
+
+        create_card(id, colonna, testo, client);
+        break;
+    }
+    case HELLO: {
+        hello(port);
+        break;
+    }
+    case QUIT: {
+        quit(port);
+        break;
+    }
+    case PONG_LAVAGNA: {
+        // pong_lavagna();
+        break;
+    }
+    case ACK_CARD: {
+        // ack_card();
+        break;
+    }
+    case REQUEST_USER_LIST: {
+        // request_user_list();
+        break;
+    }
+    case CARD_DONE: {
+        // card_done();
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 void mostra_lavagna() {
-	system("clear");    
+    system("clear");
 
-	// stampa header
+    // stampa header
     for (int c = 0; c < NUM_COLS; c++) {
         printf("%-*s", COL_WIDTH, col_names[c]);
     }
     printf("\n");
     for (int i = 0; i < NUM_COLS * COL_WIDTH; i++) {
-		printf("-");
-	}
+        printf("-");
+    }
     printf("\n");
 
     // ottieni il numero di righe
@@ -188,30 +191,25 @@ void mostra_lavagna() {
                     char buf[COL_WIDTH + 1];
 
                     switch (l) {
-						// colonna 0: testo
-  						case 0:
-  						  strncpy(buf, card->testo, COL_WIDTH);
-  						  buf[COL_WIDTH] = '\0';
-  						  printf("%-*s", COL_WIDTH, buf);
-  						  break;
+                    // colonna 0: testo
+                    case 0:
+                        strncpy(buf, card->testo, COL_WIDTH);
+                        buf[COL_WIDTH] = '\0';
+                        printf("%-*s", COL_WIDTH, buf);
+                        break;
 
-						// colonna 1: altri dati
-  						case 1: 
-  						  snprintf(buf, sizeof(buf),
-  						    "ID:%d Client:%d %02d-%02d-%04d %02d:%02d:%02d",
-  						    card->id, card->utente,
-  						    card->timestamp.tm_mday, card->timestamp.tm_mon + 1, card->timestamp.tm_year + 1900,
-  						    card->timestamp.tm_hour, card->timestamp.tm_min, card->timestamp.tm_sec
-  						  );
+                    // colonna 1: altri dati
+                    case 1:
+                        snprintf(buf, sizeof(buf), "ID:%d Client:%d %02d-%02d-%04d %02d:%02d:%02d", card->id, card->utente, card->timestamp.tm_mday, card->timestamp.tm_mon + 1, card->timestamp.tm_year + 1900, card->timestamp.tm_hour, card->timestamp.tm_min, card->timestamp.tm_sec);
 
-  						  buf[COL_WIDTH] = '\0';
-  						  printf("%-*s", COL_WIDTH, buf);
-  						  break;
+                        buf[COL_WIDTH] = '\0';
+                        printf("%-*s", COL_WIDTH, buf);
+                        break;
 
-						// colonna 2: spazio vuoto
-						case 2:
-							printf("%-*s", COL_WIDTH, ""); // vuoto
-					}
+                    // colonna 2: spazio vuoto
+                    case 2:
+                        printf("%-*s", COL_WIDTH, ""); // vuoto
+                    }
                 } else {
                     printf("%-*s", COL_WIDTH, ""); // vuoto
                 }
@@ -222,8 +220,8 @@ void mostra_lavagna() {
     }
 }
 
-void init_lavagna() { 
-	create_card(1, TO_DO, "Implementare integrazione per il pagamento", 0);
+void init_lavagna() {
+    create_card(1, TO_DO, "Implementare integrazione per il pagamento", 0);
     create_card(2, TO_DO, "Implementare sito web servzio", 0);
     create_card(3, TO_DO, "Diagramma delle classi UML", 0);
     create_card(4, TO_DO, "Studio dei requisiti dell'applicazione", 0);
@@ -234,5 +232,5 @@ void init_lavagna() {
     create_card(9, TO_DO, "Analisi delle classi", 0);
     create_card(10, TO_DO, "Implementare testing del software", 0);
 
-	mostra_lavagna();
+    mostra_lavagna();
 }

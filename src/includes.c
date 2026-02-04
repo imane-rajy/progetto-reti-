@@ -3,6 +3,57 @@
 #include <string.h>
 #include <sys/socket.h>
 
+void card_to_buf(const Card *c, char *buf) { 
+	snprintf(buf, CMD_BUF_SIZE, "%d %d %d %d-%d-%d %d:%d:%d %s", 
+			c->id,
+			c->colonna, 
+			c->utente, 
+			c->timestamp.tm_mday, 
+			c->timestamp.tm_mon + 1, 
+			c->timestamp.tm_year + 1900, 
+			c->timestamp.tm_hour, 
+			c->timestamp.tm_min, 
+			c->timestamp.tm_sec, 
+			c->testo); 
+}
+
+void buf_to_card(char *buf, Card *cm) {
+    int day, mon, year, hour, min, sec;
+    int n = sscanf(buf, "%d %d %d %d-%d-%d %d:%d:%d ", 
+			&cm->id, 
+			(int *)&cm->colonna, 
+			&cm->utente, 
+			&day, 
+			&mon, 
+			&year, 
+			&hour, 
+			&min,
+			&sec);
+
+    if (n == 9) {
+        cm->timestamp.tm_mday = day;
+        cm->timestamp.tm_mon = mon - 1;
+        cm->timestamp.tm_year = year - 1900;
+        cm->timestamp.tm_hour = hour;
+        cm->timestamp.tm_min = min;
+        cm->timestamp.tm_sec = sec;
+    } else {
+        memset(&cm->timestamp, 0, sizeof(struct tm));
+    }
+
+    char *text_start = buf;
+    for (int i = 0; i < 9; i++) {
+        text_start = strchr(text_start, ' ');
+        if (!text_start)
+            break;
+        text_start++;
+    }
+
+    if (text_start)
+        strncpy(cm->testo, text_start, MAX_TESTO - 1);
+    cm->testo[MAX_TESTO - 1] = '\0';
+}
+
 typedef struct {
     CommandType type;
     const char *str;

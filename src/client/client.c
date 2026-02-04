@@ -19,41 +19,38 @@ pthread_mutex_t client_sock_m;
 
 volatile int running = 1;
 
-void get_card(){
+void get_card() {
 
     char buffer[BUFFER_SIZE];
     Command cmd = {0};
-    if(recv_command(&cmd, buffer, client_sock, &client_sock_m) < 0 ){
+    if (recv_command(&cmd, buffer, client_sock, &client_sock_m) < 0) {
         perror("Errore nella receive");
         running = 0;
         break;
     }
 
-    if(cmd.type == HANDLE_CARD && cmd.args){
-        
+    if (cmd.type == HANDLE_CARD && cmd.args) {
     }
 }
 
 void *listener_thread(void *arg) {
-   
 
     while (running) {
         // effettua il ciclo della card:
         // - ottieni card dal server
         Command cmd = {0};
         get_card();
-        if(recv_command(&cmd, buffer, client_sock, &client_sock_m) < 0 ){
+        if (recv_command(&cmd, buffer, client_sock, &client_sock_m) < 0) {
             perror("Errore nella receive");
             running = 0;
             break;
         }
 
-        
         // - aspetta
         int n = rand() % 30;
         sleep(n);
         // - ottieni lista client
-        Command cmd = { .type = REQUEST_USER_LIST};
+        Command cmd = {.type = REQUEST_USER_LIST};
         if (send_command(&cmd, client_sock, &client_sock_m) < 0) {
             perror("Errore nella send");
             running = 0;
