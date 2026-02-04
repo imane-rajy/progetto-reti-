@@ -63,9 +63,9 @@ int main(int argc, char* argv[]) {
         perror("Connessione fallita");
         return -1;
     }
-   
+  
 		// entra in un ciclo di esecuzione di comandi
-    while(1){
+    while(1) {
         printf("Inserisci il messaggio da inviare al server: ");
     
 				char buffer[BUFFER_SIZE] = {0};
