@@ -1,4 +1,5 @@
 #include "includes.h"
+#include <pthread.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -87,4 +88,44 @@ void buf_to_cmd(char *buf, Command *cm) {
   while ((token = strtok(NULL, " ")) && argc < MAX_CMD_ARGS) {
     cm->args[argc++] = token;
   }
+}
+
+
+
+int send_command(const Command *cm, int sock, pthread_mutex_t* m){
+
+  pthread_mutex_lock(m);
+  int ret = send_command(cm, sock);
+  pthread_mutex_unlock(m);
+  return ret;
+
+
+}
+
+int send_command(const Command *cm, int sock){
+
+    char* buf;
+    cmd_to_buf(cm, buf);
+    int ret = send(sock, buf, strlen(buf), 0);
+    return ret;
+}
+
+
+
+int recv_command(Command *cm, char* buf, int sock, pthread_mutex_t* m){
+
+  pthread_mutex_lock(m);
+  int ret = recv_command(buf, sock);
+  pthread_mutex_unlock(m);
+  return ret;
+
+
+}
+
+int recv_command(Command* cm, char* buf, int sock){
+
+    int ret = recv(sock, buf, sizeof(buf), 0);
+    
+    buf_to_cmd(buf, cm);
+    return ret;
 }

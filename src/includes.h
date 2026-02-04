@@ -44,5 +44,5 @@ typedef struct {
 int get_argc(const Command *cm);
 void cmd_to_buf(const Command *cm, char *buf);
 void buf_to_cmd(char *buf, Command *cm);
-
+int send_command(const Command *cm, int sock);
 #endif
