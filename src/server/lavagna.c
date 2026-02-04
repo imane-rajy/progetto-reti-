@@ -127,14 +127,9 @@ void gestisci_comando(const Command* cmd, unsigned short port) {
 		printf("Ho ottenuto il comando %d con %d argomenti da %d\n", cmd->type, get_argc(cmd), port);
 		return;
 
-    switch(cm->type){
+    switch(cmd->type){
         case CREATE_CARD:
-<<<<<<< HEAD
-            if(cm->args)
-            create_card();
-=======
             // create_card();
->>>>>>> 82e9106b28960627665a79b29c357f925ca551ea
             break;
         case HELLO:
             // hello();
