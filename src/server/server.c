@@ -136,7 +136,7 @@ int main() {
                 unsigned short client_port = ntohs(client_addr.sin_port);
                 inserisci_client(client_sock, client_port);
 
-                printf("Registrato nuovo client con porta %d\n", client_port);
+                printf("Connesso nuovo client con porta %d\n", client_port);
             } else {
                 // gestisci client
                 int client_sock = i;

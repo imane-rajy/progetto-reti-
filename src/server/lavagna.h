@@ -27,6 +27,6 @@ extern int num_card;
 
 void init_lavagna();
 void mostra_lavagna();
-void gestisci_comando(const Command *, unsigned short);
+void gestisci_comando(const Command *cmd, unsigned short port);
 
 #endif
