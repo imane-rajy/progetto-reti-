@@ -4,11 +4,10 @@
 
 #define COL_WIDTH 30
 
-Card cards[MAX_CARDS];
+Card cards[MAX_CARDS] = {0};
 int num_card = 0;
+
 int crea_card(int id, const char* colonna, const char* testo ){
-
-
     for(int i=0; i<MAX_CARDS; i++){
         if(cards[i].id == id){
             return -1;
@@ -78,6 +77,7 @@ void mostra_lavagna() {
         maxRows = nDone;
 
     }
+
     // stampiamo le card riga per riga
     for (int i = 0; i < maxRows; i++) {
         char *sToDo = (i < nToDo) ? toDo[i].testo : NULL;
@@ -124,31 +124,23 @@ void mostra_lavagna() {
     }
 }
 
+void gestisci_comando(char* buffer, unsigned short port){
+	printf("Sono gestisci_comando(), buffer=%s, int=%d\n", buffer, port);
 
-
-
-
-void gestisci_comando(char* buffer, int port){
-
-    cmd_type cmd = get_command_type(buffer);
-    printf("%d\n", cmd);
-    printf("%s\n", buf);
-    
+	// discrimina sul tipo di comando -> gestori
 }
 
-
 void init_lavagna(){
-
-    creaCard(1, "ToDo", "Implementare integrazione per il pagamento");
-    creaCard(2, "ToDo", "Implementare sito web servzio");
-    creaCard(3, "ToDo", "Diagramma delle classi UML");
-    creaCard(4, "ToDo", "Studio dei requisiti dell'applicazione");
-    creaCard(5, "ToDo", "Realizzare CRC card");
-    creaCard(6, "ToDo", "Studio dei casi d'uso");
-    creaCard(7, "ToDo", "Realizzazione dei flow of events");
-    creaCard(8, "Doing", "Diagramma di deployment");
-    creaCard(9, "ToDo", "Analisi delle classi");
-    creaCard(10, "ToDo", "Implementare testing del software");
-    mostraLavagna();
+    crea_card(1, "ToDo", "Implementare integrazione per il pagamento");
+    crea_card(2, "ToDo", "Implementare sito web servzio");
+    crea_card(3, "ToDo", "Diagramma delle classi UML");
+    crea_card(4, "ToDo", "Studio dei requisiti dell'applicazione");
+    crea_card(5, "ToDo", "Realizzare CRC card");
+    crea_card(6, "ToDo", "Studio dei casi d'uso");
+    crea_card(7, "ToDo", "Realizzazione dei flow of events");
+    crea_card(8, "Doing", "Diagramma di deployment");
+    crea_card(9, "ToDo", "Analisi delle classi");
+    crea_card(10, "ToDo", "Implementare testing del software");
+    mostra_lavagna();
 
 }

@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-#define BUFFER_SIZE 256
+#define BUFFER_SIZE 1024
 
 #define CLIENT_ADDR "127.0.0.1"
 
@@ -22,11 +22,15 @@ int main(int argc, char* argv[]) {
     unsigned short port = atoi(argv[1]);
     
 		// crea socket
-    int sock;
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    int client_sock;
+    if ((client_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Errore nella creazione del socket");
         return -1;
     }
+		
+		// rendi il socket di ascolto riutilizzabile (per debugging più veloce)
+		int yes = 1;
+		setsockopt(client_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
 		// configura indirizzo client	
   	struct sockaddr_in client_addr;
@@ -39,7 +43,7 @@ int main(int argc, char* argv[]) {
     }
 
 		// collega ad indirizzo client 
-		if(bind(sock, (struct sockaddr*)&client_addr, sizeof(client_addr)) < 0) {
+		if(bind(client_sock, (struct sockaddr*)&client_addr, sizeof(client_addr)) < 0) {
 				perror("Errore nella bind");
 				return -1;
 		}
@@ -55,32 +59,33 @@ int main(int argc, char* argv[]) {
     }
 
 		// connetti al server
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+    if (connect(client_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         perror("Connessione fallita");
         return -1;
     }
    
 		// entra in un ciclo di esecuzione di comandi
-    char buffer[BUFFER_SIZE] = {0};
     while(1){
         printf("Inserisci il messaggio da inviare al server: ");
+    
+				char buffer[BUFFER_SIZE] = {0};
         if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
         		printf("Errore nella lettura dell'input\n");
-            close(sock);
+            close(client_sock);
             return -1;
         }
         buffer[strcspn(buffer, "\n")] = '\0'; // rimuove il newline
 
         // invio il comando al server
-        if (send(sock, buffer, strlen(buffer), 0) < 0) {
-            perror("Errore nell'invio");
-            close(sock);
+        if (send(client_sock, buffer, strlen(buffer), 0) < 0) {
+            perror("Errore nella send");
+            close(client_sock);
             return -1;
         }
 
         printf("Messaggio inviato al server: %s\n", buffer);
 		}
 
-    close(sock);
+    close(client_sock);
     return 0;
 }

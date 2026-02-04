@@ -4,107 +4,174 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
-#include <errno.h>
 #include "lavagna.h"
-#define PORT 5678
+
 #define MAX_CLIENTS 30
 #define BUFFER_SIZE 1024
 
+#define SERVER_ADDR "127.0.0.1"
+#define SERVER_PORT 5678
 
+typedef struct {
+	int socket;
+	unsigned short port;
+} Client;
+
+Client clients[MAX_CLIENTS] = {0};
+int num_client = 0;
+
+void inserisci_client(int sock, unsigned short port) {
+	for(int i = 0; i < MAX_CLIENTS; i++) {
+		if(clients[i].socket != 0) continue;
+
+		clients[i].socket = sock;
+		clients[i].port = port;
+	}
+
+	// errore: spazio esaurito
+}
+
+void rimuovi_client(int sock) {
+	for(int i = 0; i < MAX_CLIENTS; i++) {
+		if(clients[i].socket != sock) continue;
+
+		clients[i].socket = 0;
+	}
+}
+
+unsigned short get_port(int sock) {
+	for(int i = 0; i < MAX_CLIENTS; i++) {
+		if(clients[i].socket != sock) continue;
+
+		return clients[i].port;
+	}
+
+	return 0;
+}
 
 int main() {
-    int server_fd, new_socket, max_sd, sd, activity;
-    struct sockaddr_in address;
-    int addrlen = sizeof(address), client_socket[MAX_CLIENTS] = {0};
-    char buffer[BUFFER_SIZE] = {0};
-    fd_set readfds;
+		// crea socket ascolto	
+    int listen_sock;
+    if ((listen_sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("Errore nella creazione del socket di ascolto");
+    		return -1;
+		}
+  
+		// rendi il socket di ascolto riutilizzabile (per debugging più veloce)
+		int yes = 1;
+		setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+
+		// configura indirizzo server
+    struct sockaddr_in serv_addr;   
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(SERVER_PORT);
+
+		// collega ad indirizzo server
+    if (bind(listen_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        perror("Errore nella bind");
+    		return -1;
+		}
+
+		// metti il socket di ascolto, in ascolto
+    if (listen(listen_sock, 10) < 0) {
+        perror("Errore nella listen");
+    		return -1;
+    }
+
+    printf("Server TCP in ascolto sulla porta %d...\n", SERVER_PORT);
+	
+		// inizializza lavagna
     init_lavagna();
 
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("Socket fallita");
-        exit(EXIT_FAILURE);
-    }
+		// inizializza multiplexing
+		fd_set master_set, read_set;
+		int fdmax;
+  
+		FD_ZERO(&master_set);
 
-   
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
+		// inserisci il socket di ascolto nel set master
+		FD_SET(listen_sock, &master_set);
+		fdmax = listen_sock;
 
+		// configura set di lettura
+		FD_ZERO(&read_set);
+	
+		// esegui ciclo di multiplexing
+		while(1) {
+				// copia set master nel set di ascolto
+				read_set = master_set;
 
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("Bind fallito");
-        exit(EXIT_FAILURE);
-    }
+				// scansiona con la select
+				if (select(fdmax + 1, &read_set, NULL, NULL, NULL) < 0) {
+					return -1;
+				}
 
+				for (int i = 0; i <= fdmax; i++) {
+					// controlla che si qualcosa da leggere
+					if (!FD_ISSET(i, &read_set)) {
+						continue;
+					}
 
-    if (listen(server_fd, 10) < 0) {
-        perror("Listen fallito");
-        exit(EXIT_FAILURE);
-    }
+					if (i == listen_sock) { 
+						// accetta nuovo client
+						struct sockaddr_in client_addr;
+						socklen_t client_len = sizeof(client_addr);
+						int client_sock = accept(listen_sock, (struct sockaddr *)&client_addr, &client_len);
+						if (client_sock < 0) {
+							perror("Errore durante la accept");
+							continue;
+						}
+      
+						// inserisci nel master set
+						FD_SET(client_sock, &master_set);
+      			if (client_sock > fdmax) {
+      			  fdmax = client_sock;
+      			}
+  
+						// ottieni e registra porta
+						unsigned short client_port = ntohs(client_addr.sin_port);
+						inserisci_client(client_sock, client_port);
 
-    printf("Server TCP in ascolto sulla porta %d...\n", PORT);
+						printf("Registrato nuovo client con porta %d\n", client_port);
+					} else { 
+						// gestisci client
+						int client_sock = i;
+						
+						// ottieni porta client
+						unsigned short client_port = get_port(client_sock);
+					
+						// ricevi dal client
+						char buffer[BUFFER_SIZE] = {0};
+						int len = recv(client_sock, &buffer, BUFFER_SIZE, 0);
+						if(len < 0) {
+							perror("Errore nella recv");
+							continue;
+						}
 
-    while (1) {
-       
-        FD_ZERO(&readfds);
+						// gestisci socket chiusi
+						if(len == 0) {
+							rimuovi_client(client_sock);
+							
+							// aggiorna master set
+							FD_CLR(client_sock, &master_set); 
+							
+							for (int i = FD_SETSIZE - 1; i >= 0; i--) {
+								if (FD_ISSET(i, &master_set)) {
+									fdmax = i;
+									break;
+								}
+							}
 
-        
-        FD_SET(server_fd, &readfds);
-        max_sd = server_fd;
+							printf("Client %d disconnesso\n", client_port);
+							continue;
+						}	
 
-       
-        for (int i = 0; i < MAX_CLIENTS; i++) {
-            sd = client_socket[i];
-            if (sd > 0) {
-                FD_SET(sd, &readfds);
-            }
-            if (sd > max_sd) {
-                max_sd = sd;
-            }
-        }
+						// gestisci comando
+						gestisci_comando(buffer, client_port);
+					}
+				}
+		}    
 
-
-        activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
-
-        if ((activity < 0) && (errno != EINTR)) {
-            perror("Select fallito");
-        }
-
-
-        if (FD_ISSET(server_fd, &readfds)) {
-            if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
-                perror("Accept fallito");
-                exit(EXIT_FAILURE);
-            }
-
-            printf("Nuova connessione stabilita con client (socket fd: %d)\n", new_socket);
-
-
-            for (int i = 0; i < MAX_CLIENTS; i++) {
-                if (client_socket[i] == 0) {
-                    client_socket[i] = new_socket;
-                    printf("Aggiunto nuovo client nella posizione %d\n", i);
-                    break;
-                }
-            }
-        }
-
-        for (int i = 0; i < MAX_CLIENTS; i++) {
-            sd = client_socket[i];
-            if (FD_ISSET(sd, &readfds)) {
-                int valread = read(sd, buffer, BUFFER_SIZE);
-                if (valread == 0) {
-
-                    printf("Client disconnesso (socket fd: %d)\n", sd);
-                    close(sd);
-                    client_socket[i] = 0;
-                } else {
-                    buffer[valread] = '\0';
-                    gestisci_comando(buffer, sd);
-                }
-            }
-        }
-    }
-
-    return 0;
+		return 0;
 }
