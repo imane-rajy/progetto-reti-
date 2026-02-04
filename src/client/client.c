@@ -35,8 +35,8 @@ void* console_thread(void* arg) {
     char buffer[BUFFER_SIZE];
 
     while (running) {
-				printf("$ ");
-				fflush(stdout);
+		printf("$ ");
+		fflush(stdout);
 
         if (fgets(buffer, sizeof(buffer), stdin) == NULL) continue;
         buffer[strcspn(buffer, "\n")] = '\0';
@@ -105,13 +105,13 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-		// inizializza thread
+	// inizializza thread
     pthread_t t_listener, t_console;
     
-		// thread di ascolto, gestisce il ciclo delle card
-		pthread_create(&t_listener, NULL, listener_thread, NULL);
+	// thread di ascolto, gestisce il ciclo delle card
+	pthread_create(&t_listener, NULL, listener_thread, NULL);
 
-		// thread console, gestisce i comandi da tastiera
+	// thread console, gestisce i comandi da tastiera
     pthread_create(&t_console, NULL, console_thread, NULL);
 
     pthread_join(t_listener, NULL);

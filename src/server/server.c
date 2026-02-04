@@ -125,9 +125,9 @@ int main() {
       
 						// inserisci nel master set
 						FD_SET(client_sock, &master_set);
-      			if (client_sock > fdmax) {
-      			  fdmax = client_sock;
-      			}
+						if (client_sock > fdmax) {
+						  fdmax = client_sock;
+						}
   
 						// ottieni e registra porta
 						unsigned short client_port = ntohs(client_addr.sin_port);

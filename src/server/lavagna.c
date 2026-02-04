@@ -1,125 +1,112 @@
 #include "lavagna.h"
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-#define COL_WIDTH 30
+#define COL_WIDTH 50
+
+const char *col_names[] = {"TO_DO", "DOING", "DONE"};
+
+Colonna str_to_col(const char *str) {
+	for (int i = 0; i < NUM_COLS; i++) {
+    	if (strcmp(col_names[i], str) == 0) {
+      		return i;
+    	}
+	}
+
+  return 0;
+}
+
+const char *col_to_str(Colonna id) {
+	return col_names[id];
+}
 
 Card cards[MAX_CARDS] = {0};
 int num_card = 0;
 
-int create_card(int id, const char* colonna, const char* testo ){
-    for(int i = 0; i < MAX_CARDS; i++){
+int create_card(int id, Colonna colonna, const char* testo, unsigned short client) {
+	// verifica che l'id sia unico
+  	for(int i = 0; i < MAX_CARDS; i++){
         if(cards[i].id == id){
             return -1;
         }
     }
 
+	// alloca la card
     int idx = num_card;
-
+    num_card++;
     if(idx >= MAX_CARDS){
         return -2;
     }
 
+	// imposta i dati della card
     cards[idx].id = id;
-    if(strcmp(colonna, "ToDo") == 0){
-        cards[idx].colonna = 0;
-    }
-    else if(strcmp(colonna, "Doing") == 0){
-        cards[idx].colonna = 1;
-    }
-    else if(strcmp(colonna, "Do") == 0){
-        cards[idx].colonna = 2;
-    }
-    else{
-        return -3;
-    }
+	cards[idx].colonna = colonna;
 
     strncpy(cards[idx].testo, testo, MAX_TESTO - 1);
     cards[idx].testo[MAX_TESTO - 1] = '\0';
-    cards[idx].utente = -1;
 
-    num_card++;
+	cards[idx].utente = client;
 
-    return idx;
+	return idx;
 }
 
 void mostra_lavagna() {
-    printf("\n| %-*s | %-*s | %-*s |\n",
-           COL_WIDTH, "TO DO",
-           COL_WIDTH, "DOING",
-           COL_WIDTH, "DONE");
-
-    // linea di separazione
-    for (int k = 0; k < 3; k++) {
-        printf("|");
-        for (int j = 0; j < COL_WIDTH + 2; j++)
-            printf("-");
+	// stampa header
+	for (int c = 0; c < NUM_COLS; c++) {
+        printf("%-*s", COL_WIDTH, col_names[c]);
     }
-    printf("|\n");
+    printf("\n");
 
-    // separiamo le card per colonna
-    Card toDo[MAX_CARDS], doing[MAX_CARDS], done[MAX_CARDS];
-    int nToDo = 0, nDoing = 0, nDone = 0;
-
+	// ottieni il numero di righe
+    int max_rows = 0;
+    int col_counts[NUM_COLS] = {0};
     for (int i = 0; i < num_card; i++) {
-        if (cards[i].colonna == 0) toDo[nToDo++] = cards[i];
-        else if (cards[i].colonna == 1) doing[nDoing++] = cards[i];
-        else done[nDone++] = cards[i];
-    }
-    
-    int maxRows = nToDo;
-    if (nDoing > maxRows) {
-        maxRows = nDoing;
-    }
-    if (nDone > maxRows) {
-        maxRows = nDone;
-
+        col_counts[cards[i].colonna]++;
+        if (col_counts[cards[i].colonna] > max_rows) max_rows = col_counts[cards[i].colonna];
     }
 
-    // stampiamo le card riga per riga
-    for (int i = 0; i < maxRows; i++) {
-        char *sToDo = (i < nToDo) ? toDo[i].testo : NULL;
-        char *sDoing = (i < nDoing) ? doing[i].testo : NULL;
-        char *sDone = (i < nDone) ? done[i].testo : NULL;
+	// realizza una tabella di puntatori a card organizzata per colonne
+    Card *col_cards[NUM_COLS][MAX_CARDS] = {0};
+    int col_index[NUM_COLS] = {0};
+    for (int i = 0; i < num_card; i++) {
+        Colonna col = cards[i].colonna;
+        col_cards[col][col_index[col]++] = &cards[i];
+    }
 
-        int lenToDo = sToDo ? strlen(sToDo) : 0;
-        int lenDoing = sDoing ? strlen(sDoing) : 0;
-        int lenDone = sDone ? strlen(sDone) : 0;
+	// stampa le card
+    for (int row = 0; row < max_rows; row++) {
+		// 2 righe per card
+		for(int l = 0; l < 2; l++) {
+			for (int c = 0; c < NUM_COLS; c++) {
+				if (row < col_index[c]) {
+					// card da stampare
+					Card* card = col_cards[c][row];
 
-        // numero di righe necessarie per testi lunghi
-        int righe = 1;
-        if (lenToDo > COL_WIDTH) righe = (lenToDo + COL_WIDTH - 1)/COL_WIDTH;
-        if (lenDoing > COL_WIDTH) { int r = (lenDoing + COL_WIDTH - 1)/COL_WIDTH; if (r > righe) righe = r; }
-        if (lenDone > COL_WIDTH) { int r = (lenDone + COL_WIDTH - 1)/COL_WIDTH; if (r > righe) righe = r; }
-
-        for (int r = 0; r < righe; r++) {
-            // TO DO
-            if (sToDo)
-                printf("| %-*.*s ", COL_WIDTH, COL_WIDTH, sToDo + r*COL_WIDTH);
-            else
-                printf("| %-*s ", COL_WIDTH, "");
-
-            // DOING
-            if (sDoing)
-                printf("| %-*.*s ", COL_WIDTH, COL_WIDTH, sDoing + r*COL_WIDTH);
-            else
-                printf("| %-*s ", COL_WIDTH, "");
-
-            // DONE
-            if (sDone)
-                printf("| %-*.*s |\n", COL_WIDTH, COL_WIDTH, sDone + r*COL_WIDTH);
-            else
-                printf("| %-*s |\n", COL_WIDTH, "");
+					switch(l) {
+						case 0:
+							printf("%-*s", COL_WIDTH, card->testo);
+							break;
+						case 1:
+							printf("ID: %d | User: %d | Time: %02d-%02d-%04d %02d:%02d:%02d",
+								card->id,
+								card->utente,
+								card->timestamp.tm_mday,
+								card->timestamp.tm_mon + 1,
+								card->timestamp.tm_year + 1900,
+								card->timestamp.tm_hour,
+								card->timestamp.tm_min,
+								card->timestamp.tm_sec
+							);
+							break;
+					}
+				} else {
+					printf("%-*s", COL_WIDTH, ""); // vuoto 
+				}
+			}
+        	printf("\n");
         }
-
-        // separatore tra le righe
-        printf("|");
-        for (int k = 0; k < 3; k++) {
-            for (int j = 0; j < COL_WIDTH + 2; j++) printf("-");
-            printf("|");
-        }
-        printf("\n");
     }
 }
 
@@ -128,43 +115,55 @@ void gestisci_comando(const Command* cmd, unsigned short port) {
 		return;
 
     switch(cmd->type){
-        case CREATE_CARD:
-            // create_card();
+        case CREATE_CARD: {
+			int id = atoi(cmd->args[0]);
+			Colonna colonna = str_to_col(cmd->args[1]);
+			const char* testo = cmd->args[2];
+			unsigned short client = port;
+
+            create_card(id, colonna, testo, client);
             break;
-        case HELLO:
+		}
+        case HELLO: {
             // hello();
             break;
-        case QUIT:
+		}
+        case QUIT: {
             // quit();
             break;
-        case PONG_LAVAGNA:
+		}
+        case PONG_LAVAGNA: {
             // pong_lavagna();
             break;
-        case ACK_CARD:
+		}
+        case ACK_CARD: {
             // ack_card();
             break;
-        case REQUEST_USER_LIST:
+		}
+        case REQUEST_USER_LIST: {
             // request_user_list();
             break;
-        case CARD_DONE:
+		}
+        case CARD_DONE: {
             // card_done();
             break;
+		}
         default:
             break;
     }
 }
 
 void init_lavagna(){
-    create_card(1, "ToDo", "Implementare integrazione per il pagamento");
-    create_card(2, "ToDo", "Implementare sito web servzio");
-    create_card(3, "ToDo", "Diagramma delle classi UML");
-    create_card(4, "ToDo", "Studio dei requisiti dell'applicazione");
-    create_card(5, "ToDo", "Realizzare CRC card");
-    create_card(6, "ToDo", "Studio dei casi d'uso");
-    create_card(7, "ToDo", "Realizzazione dei flow of events");
-    create_card(8, "Doing", "Diagramma di deployment");
-    create_card(9, "ToDo", "Analisi delle classi");
-    create_card(10, "ToDo", "Implementare testing del software");
+    create_card(1, TO_DO, "Implementare integrazione per il pagamento", 0);
+    create_card(2, TO_DO, "Implementare sito web servzio", 0);
+    create_card(3, TO_DO, "Diagramma delle classi UML", 0);
+    create_card(4, TO_DO, "Studio dei requisiti dell'applicazione", 0);
+    create_card(5, TO_DO, "Realizzare CRC card", 0);
+    create_card(6, TO_DO, "Studio dei casi d'uso", 0);
+    create_card(7, TO_DO, "Realizzazione dei flow of events", 0);
+    create_card(8, TO_DO, "Diagramma di deployment", 0);
+    create_card(9, TO_DO, "Analisi delle classi", 0);
+    create_card(10, DOING, "Implementare testing del software", 0);
     mostra_lavagna();
 
 }
