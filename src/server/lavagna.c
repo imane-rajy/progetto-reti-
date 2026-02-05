@@ -19,16 +19,16 @@ int inserisci_user(unsigned short client) {
     return -1;
 }
 
-User* controlla_user(unsigned short client) {
+User *controlla_user(unsigned short client) {
     int idx = client - MIN_PORT_USERS;
-    User* user = &users[idx];
-	if (user->port == client) return user;
+    User *user = &users[idx];
+    if (user->port == client) return user;
 
     // errore: user non presente
     return NULL;
 }
 
-int rimuovi_user(User* user) {
+int rimuovi_user(User *user) {
     if (user != NULL) {
         user->port = 0;
         num_users--;
@@ -44,18 +44,6 @@ int rimuovi_user(User* user) {
 Card cards[MAX_CARDS] = {0};
 int num_cards = 0;
 
-//int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
-//    int n = 0;
-//
-//    for (int i = 0; i < num_cards && n < MAX_CARDS; i++) {
-//        if (cards[i].client == client) {
-//            user_cards[n++] = cards[i]; // copio solo le card dell’utente
-//        }
-//    }
-//
-//    return n; // ritorna quante card ci sono nel “sotto-array”
-//}
-
 void handle_card(unsigned short client) {
     for (int i = 0; i < MAX_CARDS; i++) {
         if (cards[i].colonna != TO_DO) continue;
@@ -64,7 +52,7 @@ void handle_card(unsigned short client) {
         card->client = client;
         int idx = MIN_PORT_USERS - client;
         users[idx].state = ASSIGNED_CARD;
-		timestamp_card(card);
+        timestamp_card(card);
 
         Command cmd = {.type = HANDLE_CARD};
         card_to_cmd(card, &cmd);
@@ -105,7 +93,7 @@ int request_user_list(User *user) {
             n++;
         }
 
-        if (users[i].port != 0){
+        if (users[i].port != 0) {
             // copia id client nel buffer
             snprintf(client_ports[n], 6, "%d", users[i].port);
 
@@ -115,8 +103,8 @@ int request_user_list(User *user) {
         }
     }
 
-  	// invia risposta
-  	send_client(&cm, user->port);
+    // invia risposta
+    send_client(&cm, user->port);
 
     return 0;
 }
@@ -156,35 +144,38 @@ int hello(unsigned short client) {
     return -1;
 }
 
-int quit(User* user) {
-	int port = user->port;
-	
-	int ret = rimuovi_user(user);
+int quit(User *user) {
+    int port = user->port;
+
+    int ret = rimuovi_user(user);
 
     if (ret >= 0) {
         // TODO: controllare che non abbia delle card in Doing
+<<<<<<< HEAD
         if(user->card->colonna == DOING){
             user->card->colonna = TO_DO; 
+=======
+        if (user->card->colonna == DOING) {
+            user->card->colonna = TO_DO;
+>>>>>>> 8e9fd27eae50401025249e1a46d4a710a6d37d5e
             handle_cards();
         }
-        
 
-    	printf("Deregistrato client %d\n", port);
+        printf("Deregistrato client %d\n", port);
         return 0;
     }
 
     return -1;
 }
 
-int ack_card(User* user){
+int ack_card(User *user) {
 
     user->card->colonna = DOING;
     user->state = BUSY;
     return 0;
-
 }
 
-int card_done(User* user){
+int card_done(User *user) {
 
     user->card->colonna = DONE;
     user->state = IDLE;
@@ -195,8 +186,8 @@ int card_done(User* user){
 void gestisci_comando(const Command *cmd, unsigned short port) {
     mostra_lavagna();
 
-	// controlla che si registrato o che si stia registrando adesso
-	User* user = controlla_user(port);
+    // controlla che si registrato o che si stia registrando adesso
+    User *user = controlla_user(port);
 
     if (user == NULL && cmd->type != HELLO) {
         printf("Ottenuto comando non HELLO (%d) da client non registrato %d\n", cmd->type, port);
@@ -227,7 +218,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         break;
     }
     case ACK_CARD: {
-        ret = ack_card(port);
+        ret = ack_card(user);
         break;
     }
     case REQUEST_USER_LIST: {
@@ -242,9 +233,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         break;
     }
 
-	if(ret < 0) {
-		printf("Errore nell'esecuzione del comando %d del client %d\n", cmd->type, port);
-	}
+    if (ret < 0) { printf("Errore nell'esecuzione del comando %d del client %d\n", cmd->type, port); }
 }
 
 void mostra_lavagna() {

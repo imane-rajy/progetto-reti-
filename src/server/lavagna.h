@@ -22,7 +22,7 @@ typedef enum {
 typedef struct {
     unsigned short port;
     UserState state;
-    Card* card;
+    Card *card;
 
 } User;
 
