@@ -7,19 +7,23 @@ SRC_DIR = src
 CLIENT_SRC = $(SRC_DIR)/client/client.c $(SRC_DIR)/command.c $(SRC_DIR)/card.c
 SERVER_SRC = $(SRC_DIR)/server/server.c $(SRC_DIR)/server/lavagna.c $(SRC_DIR)/command.c $(SRC_DIR)/card.c
 
-CLIENT_OUT = client
-SERVER_OUT = server
+CLIENT_OUT = utente 
+SERVER_OUT = lavagna
 
 all: $(CLIENT_OUT) $(SERVER_OUT)
 
-$(OUT_DIR):
-	mkdir -p $(OUT_DIR)
+$(CLIENT_OUT): $(CLIENT_SRC)
+	@printf "Compilo il client...\n"
+	@$(CC) $(CFLAGS) $^ -o $@
 
-$(CLIENT_OUT): $(CLIENT_SRC) | $(OUT_DIR)
-	$(CC) $(CFLAGS) $^ -o $@
+$(SERVER_OUT): $(SERVER_SRC)
+	@printf "Compilo il server...\n"
+	@$(CC) $(CFLAGS) $^ -o $@
 
-$(SERVER_OUT): $(SERVER_SRC) | $(OUT_DIR)
-	$(CC) $(CFLAGS) $^ -o $@
+format:
+	@printf "Formatto il sorgente...\n"
+	@find . \( -name "*.c" -o -name "*.h" \) -type f -exec clang-format -i {} +
 
 clean:
-	rm $(CLIENT_OUT) $(SERVER_OUT)
+	@printf "Ripulisco gli oggetti...\n"
+	@rm -f $(CLIENT_OUT) $(SERVER_OUT)
