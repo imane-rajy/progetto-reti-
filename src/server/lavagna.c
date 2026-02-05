@@ -10,34 +10,34 @@
 User users[MAX_USERS] = {0}; // array per i client registrati
 int num_user = 0;
 
-int inserisci_user(unsigned short id) {
-    for (int i = 0; i < MAX_USERS; i++) {
-        if (users[i].id != 0)
-            continue;
+int inserisci_user(unsigned short client) {
 
-        users[i].id = id;
-        users[i].state = IDLE;
+    int idx = client - MIN_PORT_USERS;
+    if(users[idx].port != 0){
+        num_user++;
         return i;
     }
+
 
     // errore: spazio esaurito
     return -1;
 }
 
-int controlla_user(unsigned short id) {
-    for (int i = 0; i < MAX_USERS; i++) {
-        if (users[i].id == id && users[i].state == BUSY)
-            return i;
-    }
+int controlla_user(unsigned short client) {
 
+    int idx = client - MIN_PORT_USERS;
+    if(users[idx].port == client && users[idx].state == BUSY)
+        return idx;
+    
     // errore: user non presente
     return -1;
 }
 
-int rimuovi_user(unsigned short id) {
-    int i = controlla_user(id);
-    if(i >= 0){
-        users[i].id = 0;
+int rimuovi_user(unsigned short client) {
+    int idx = controlla_user(client);
+    if(idx >= 0){
+        users[i].port = 0;
+        num_user--;
         return 1;
     }
 
@@ -66,6 +66,11 @@ int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
 
 void handle_cards(){
 
+    
+    for(int i = 0; i < MAX_USERS; i++){
+        if(users[i].state == IDLE)
+            handle_card(users[i].port);
+    }
 
 }
 void handle_card(unsigned short client) {
@@ -74,6 +79,8 @@ void handle_card(unsigned short client) {
 
 		Card* card = &cards[i];
 		card->client = client;
+        int idx = MIN_PORT_USERS - client;
+        users[idx].state = ASSIGNED_CARD;
 		// TODO: aggiornare timestamp
         
 		Command cmd = { .type = HANDLE_CARD };
@@ -84,6 +91,44 @@ void handle_card(unsigned short client) {
 		return;
 	}
 }
+
+int request_user_list(User *user) {
+    
+  // prepara buffer per id client
+  char client_ports[num_users][6]; // 5 caratteri + terminatore per 65535
+
+  // prepara risposta
+  cmd cm = {
+        .type = SEND_USER_LIST
+      // verrà popolato in seguito
+  };
+
+  int n = 0;
+  // itera sui client
+  for (int i = 0; i < MAX_USERS; i++) {
+        if (user == &users[i]) {
+            continue;
+        }
+
+    if (users[i].port != 0){
+      // copia id client nel buffer
+      snprintf(client_ports[n], 6, "%d", users[i].port);
+
+      // usa come argomento
+      cm.args[n] = client_ports[n];
+      n++;
+    }
+  }
+
+  // metti commento nell'ultimo argomento
+  cm.args[n++] = "fornita lista utenti registrati";
+
+  // invia risposta
+  send_client(cl->id, &cm);
+
+  return 0;
+}
+
 
 int create_card(int id, Colonna colonna, const char *testo, unsigned short client) {
     // verifica che l'id sia unico
@@ -143,12 +188,17 @@ int quit(unsigned short client) {
         return 0;
     }
 
+    return -1;
+
 }
+
+
+
 
 void gestisci_comando(const Command *cmd, unsigned short port) {
     mostra_lavagna();
 
-    if (controlla_user(port) >= 0 && cmd->type != HELLO) {
+    if (controlla_user(port) < 0 && cmd->type != HELLO) {
         printf("Ottenuto comando non HELLO (%d) da client non registrato %d\n", cmd->type, port);
         return;
     }

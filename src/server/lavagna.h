@@ -10,16 +10,21 @@
 
 #define MAX_USERS 30
 
+#define MIN_PORT_USERS  5679
+
+
+
 typedef enum{
 
     BUSY,
-    IDLE
+    IDLE,
+    ASSIGNED_CARD
 
 } UserState;
 
 
 typedef struct {
-    unsigned short id;
+    unsigned short port;
     UserState state;
 
 } User;
