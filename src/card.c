@@ -85,7 +85,7 @@ int cmd_to_card(const Command *cm, Card *c) {
     return 0;
 }
 
-void timestamp_card(Card* card) {
-  time_t now = time(NULL);
-  card->timestamp = *localtime(&now);
+void timestamp_card(Card *card) {
+    time_t now = time(NULL);
+    card->timestamp = *localtime(&now);
 }

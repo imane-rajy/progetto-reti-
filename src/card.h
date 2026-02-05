@@ -25,6 +25,6 @@ typedef struct {
 void card_to_cmd(const Card *c, Command *cm);
 int cmd_to_card(const Command *cm, Card *c);
 
-void timestamp_card(Card* card);
+void timestamp_card(Card *card);
 
 #endif
