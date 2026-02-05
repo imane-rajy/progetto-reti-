@@ -22,7 +22,6 @@ typedef enum {
 typedef struct {
     unsigned short port;
     UserState state;
-
 } User;
 
 extern Card cards[MAX_CARDS];
@@ -31,7 +30,6 @@ extern int num_cards;
 void init_lavagna();
 void mostra_lavagna();
 
-int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]);
 void gestisci_comando(const Command *cmd, unsigned short port);
 
 #endif
