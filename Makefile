@@ -1,7 +1,7 @@
 .PHONY: all clean
 
 CC = gcc
-CFLAGS = -Wall -Wextra -I./src
+CFLAGS = -Wall -Wextra -I./src -g
 SRC_DIR = src
 
 CLIENT_SRC = $(SRC_DIR)/client/client.c $(SRC_DIR)/includes.c
@@ -22,4 +22,4 @@ $(SERVER_OUT): $(SERVER_SRC) | $(OUT_DIR)
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -rf $(OUT_DIR)
+	rm $(CLIENT_OUT) $(SERVER_OUT)

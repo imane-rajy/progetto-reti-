@@ -1,57 +1,69 @@
 #include "includes.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 
-void card_to_buf(const Card *c, char *buf) { 
-	snprintf(buf, CMD_BUF_SIZE, "%d %d %d %d-%d-%d %d:%d:%d %s", 
-			c->id,
-			c->colonna, 
-			c->utente, 
-			c->timestamp.tm_mday, 
-			c->timestamp.tm_mon + 1, 
-			c->timestamp.tm_year + 1900, 
-			c->timestamp.tm_hour, 
-			c->timestamp.tm_min, 
-			c->timestamp.tm_sec, 
-			c->testo); 
+void card_to_cmd(const Card *c, Command *cm) {
+	static char id[16], col[8], user[16];
+  	static char date[32], time[16];
+  	static char testo[MAX_TESTO];
+
+  	snprintf(id, sizeof(id), "%d", c->id);
+  	snprintf(col, sizeof(col), "%d", c->colonna);
+  	snprintf(user, sizeof(user), "%d", c->utente);
+
+	snprintf(date, sizeof(date), "%02d-%02d-%04d",
+		c->timestamp.tm_mday,
+		c->timestamp.tm_mon + 1,
+		c->timestamp.tm_year + 1900);
+
+  	snprintf(time, sizeof(time), "%02d:%02d:%02d",
+		c->timestamp.tm_hour,
+		c->timestamp.tm_min,
+		c->timestamp.tm_sec);
+
+  	strncpy(testo, c->testo, MAX_TESTO - 1);
+  	testo[MAX_TESTO - 1] = '\0';
+
+  	cm->args[0] = id;
+  	cm->args[1] = col;
+  	cm->args[2] = user;
+  	cm->args[3] = date;
+  	cm->args[4] = time;  	
+	cm->args[5] = testo;
 }
 
-void buf_to_card(char *buf, Card *cm) {
-    int day, mon, year, hour, min, sec;
-    int n = sscanf(buf, "%d %d %d %d-%d-%d %d:%d:%d ", 
-			&cm->id, 
-			(int *)&cm->colonna, 
-			&cm->utente, 
-			&day, 
-			&mon, 
-			&year, 
-			&hour, 
-			&min,
-			&sec);
+int cmd_to_card(const Command *cm, Card *c) {
+	if (get_argc(cm) < 6) return -1;
 
-    if (n == 9) {
-        cm->timestamp.tm_mday = day;
-        cm->timestamp.tm_mon = mon - 1;
-        cm->timestamp.tm_year = year - 1900;
-        cm->timestamp.tm_hour = hour;
-        cm->timestamp.tm_min = min;
-        cm->timestamp.tm_sec = sec;
-    } else {
-        memset(&cm->timestamp, 0, sizeof(struct tm));
-    }
+	int day, mon, year, hour, min, sec;
 
-    char *text_start = buf;
-    for (int i = 0; i < 9; i++) {
-        text_start = strchr(text_start, ' ');
-        if (!text_start)
-            break;
-        text_start++;
-    }
+	c->id = atoi(cm->args[0]);
+	c->colonna = (Colonna) atoi(cm->args[1]);
+	c->utente = atoi(cm->args[2]);
 
-    if (text_start)
-        strncpy(cm->testo, text_start, MAX_TESTO - 1);
-    cm->testo[MAX_TESTO - 1] = '\0';
+	sscanf(cm->args[3], "%d-%d-%d", &day, &mon, &year);
+	sscanf(cm->args[4], "%d:%d:%d", &hour, &min, &sec);
+
+	c->timestamp.tm_mday = day;
+	c->timestamp.tm_mon = mon - 1;
+	c->timestamp.tm_year = year - 1900;
+	c->timestamp.tm_hour = hour;
+	c->timestamp.tm_min = min;
+	c->timestamp.tm_sec = sec;
+
+	char* pun = c->testo;
+	for(int i = 5; i < get_argc(cm); i++) {
+		const char* arg = cm->args[i];
+		
+		strcpy(pun, arg);
+		pun += strlen(arg);
+		
+		*pun++ = ' ';
+	}
+
+	return 0;
 }
 
 typedef struct {
@@ -126,8 +138,8 @@ void cmd_to_buf(const Command *cm, char *buf) {
     }
 }
 
-void buf_to_cmd(char *buf, Command *cm) {
-    // tokenizza il tipo
+void buf_to_cmd(char *buf, Command *cm) { 
+	// tokenizza il tipo
     char *token = strtok(buf, " ");
     cm->type = str_to_type(token);
 
@@ -139,33 +151,55 @@ void buf_to_cmd(char *buf, Command *cm) {
 }
 
 int send_command(const Command *cm, int sock, pthread_mutex_t *m) {
-    if (m != NULL)
-        pthread_mutex_lock(m);
+    if (m != NULL) pthread_mutex_lock(m);
 
     // metti comando su buffer
-    char buf[CMD_BUF_SIZE];
+    char buf[CMD_BUF_SIZE + 1] = {0};
     cmd_to_buf(cm, buf);
+	buf[strlen(buf)] = '\n'; // delimitatore: a capo
 
     // invia buffer
     int ret = send(sock, &buf, strlen(buf), 0);
 
-    if (m != NULL)
-        pthread_mutex_unlock(m);
+    if (m != NULL) pthread_mutex_unlock(m);
 
     return ret;
 }
 
-int recv_command(Command *cm, char *buf, int sock, pthread_mutex_t *m) {
-    if (m != NULL)
-        pthread_mutex_lock(m);
+int recv_command(Command *cm, int sock, pthread_mutex_t *m) {
+    static char recvbuf[1024]; 
+	static int recvidx = 0;
 
-    // prendi buffer
-    int ret = recv(sock, buf, sizeof(buf), 0);
+	if (m != NULL) pthread_mutex_lock(m);
 
-    // scrivi comando da buffer
-    buf_to_cmd(buf, cm);
+	int ret;
+	while(1) {
+		// prendi buffer
+		ret = recv(sock, recvbuf, sizeof(recvbuf), 0);
+		
+		// gestisci errori di lettura
+		if (ret <= 0) break;
+		
+		// aggiungi i byte letti
+		recvidx += ret;
+		
+		int done = 0;
+		for (int i = 0; i < recvidx; i++) {
+			// se trovi \n è una linea
+			if (recvbuf[i] == '\n') {
+				recvbuf[i] = '\0';
+	
+				// scrivi comando da buffer
+				buf_to_cmd(recvbuf, cm);
+				done = 1;
+				break;
+			}
+		}	
 
-    if (m != NULL)
-        pthread_mutex_unlock(m);
-    return ret;
+		if(done) break;
+	}
+
+    if (m != NULL) pthread_mutex_unlock(m);
+
+	return ret;
 }

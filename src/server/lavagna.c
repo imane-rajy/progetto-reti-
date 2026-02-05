@@ -1,3 +1,4 @@
+#include "server.h"
 #include "lavagna.h"
 
 #include <stdio.h>
@@ -61,6 +62,23 @@ const char *col_to_str(Colonna id) { return col_names[id]; }
 Card cards[MAX_CARDS] = {0};
 int num_card = 0;
 
+void handle_card(unsigned short client) {
+	for(int i = 0; i < MAX_CARDS; i++) {
+		if(cards[i].colonna != TO_DO) continue;
+
+		Card* card = &cards[i];
+		card->utente = client;
+		// TODO: aggiornare timestamp
+
+		Command cmd = { .type = HANDLE_CARD };
+		card_to_cmd(card, &cmd);
+		send_client(&cmd, client);
+   		
+		printf("Assegnata card %d a client %d\n", card->id, client);	
+		return;
+	}
+}
+
 int create_card(int id, Colonna colonna, const char *testo, unsigned short client) {
     // verifica che l'id sia unico
     for (int i = 0; i < MAX_CARDS; i++) {
@@ -91,8 +109,10 @@ int create_card(int id, Colonna colonna, const char *testo, unsigned short clien
 
 int hello(unsigned short client) {
     inserisci_user(client);
-
     printf("Registrato client %d\n", client);
+	
+	handle_card(client);
+
     return 0;
 }
 
@@ -107,7 +127,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
     mostra_lavagna();
 
     if (controlla_user(port) == 0 && cmd->type != HELLO) {
-        printf("Ottenuto comando non HELLO da client non registrato %d\n", port);
+        printf("Ottenuto comando non HELLO (%d) da client non registrato %d\n", cmd->type, port);
         return;
     }
 
@@ -152,7 +172,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
 }
 
 void mostra_lavagna() {
-    system("clear");
+    // system("clear");
 
     // stampa header
     for (int c = 0; c < NUM_COLS; c++) {

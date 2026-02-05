@@ -3,26 +3,7 @@
 
 #include <pthread.h>
 
-#define MAX_TESTO 256
-#define MAX_CARD_SIZE (MAX_TESTO + 256)
-
-typedef enum { TO_DO, DOING, DONE } Colonna;
-
-#define NUM_COLS (DONE + 1)
-
-Colonna str_to_col(const char *str);
-const char *col_to_str(Colonna id);
-
-typedef struct {
-    int id;
-    Colonna colonna;
-    char testo[MAX_TESTO];
-    int utente;
-    struct tm timestamp;
-} Card;
-
-void card_to_buf(const Card *c, char *buf);
-void buf_to_card(char *buf, Card *cm);
+// comandi
 
 typedef enum {
     // client -> server
@@ -69,6 +50,29 @@ void cmd_to_buf(const Command *cm, char *buf);
 void buf_to_cmd(char *buf, Command *cm);
 
 int send_command(const Command *cm, int sock, pthread_mutex_t *m);
-int recv_command(Command *cm, char *buf, int sock, pthread_mutex_t *m);
+int recv_command(Command *cm, int sock, pthread_mutex_t *m);
+
+// card
+
+#define MAX_TESTO 256
+#define MAX_CARD_SIZE (MAX_TESTO + 256)
+
+typedef enum { TO_DO, DOING, DONE } Colonna;
+
+#define NUM_COLS (DONE + 1)
+
+Colonna str_to_col(const char *str);
+const char *col_to_str(Colonna id);
+
+typedef struct {
+    int id;
+    Colonna colonna;
+    char testo[MAX_TESTO];
+    int utente;
+    struct tm timestamp;
+} Card;
+
+void card_to_cmd(const Card *c, Command *cm);
+int cmd_to_card(const Command *cm, Card *c);
 
 #endif

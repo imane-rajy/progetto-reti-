@@ -164,15 +164,15 @@ int main() {
                 unsigned short client_port = get_port(client_sock);
 
                 // ricevi dal client
-                char buffer[BUFFER_SIZE] = {0};
-                int len = recv(client_sock, &buffer, BUFFER_SIZE, 0);
-                if (len < 0) {
+                Command cmd = {0};
+                int ret = recv_command(&cmd, client_sock, NULL);
+                if (ret < 0) {
                     perror("Errore nella recv");
                     continue;
                 }
 
                 // gestisci socket chiusi
-                if (len == 0) {
+                if (ret == 0) {
                     rimuovi_client(client_sock);
 
                     // aggiorna master set
@@ -189,9 +189,6 @@ int main() {
                     continue;
                 }
 
-                // gestisci comando
-                Command cmd = {0};
-                buf_to_cmd(buffer, &cmd);
                 gestisci_comando(&cmd, client_port);
             }
         }
