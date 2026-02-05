@@ -11,14 +11,10 @@
 #define MIN_PORT_USERS 5679
 #define MIN_NUM_USER_DONE 2
 
-#define WAIT_TO_PING 5
+#define WAIT_TO_PING 30
 #define WAIT_FOR_PONG 10
 
-typedef enum {
-    BUSY,
-    IDLE,
-    ASSIGNED_CARD
-} UserState;
+typedef enum { BUSY, IDLE, ASSIGNED_CARD } UserState;
 
 typedef struct {
     unsigned short port;

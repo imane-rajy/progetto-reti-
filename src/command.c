@@ -149,29 +149,31 @@ int recv_command(Command *cm, int sock, pthread_mutex_t *m) {
     return ret;
 }
 
-int sendto_command(const Command* cm, int sock, const struct sockaddr_in * addr) {
+int sendto_command(const Command *cm, int sock, const struct sockaddr_in *addr) {
     // metti comando su buffer
-    char buf[CMD_BUF_SIZE + 1] = {0};
+    char buf[CMD_BUF_SIZE];
     cmd_to_buf(cm, buf);
-    
-	// invia buffer
-    return sendto(sock, &buf, strlen(buf), 0, (struct sockaddr*) &addr, sizeof(*addr));
+
+    // invia buffer
+    return sendto(sock, buf, strlen(buf), 0, (const struct sockaddr *)addr, sizeof(*addr));
 }
 
-int recvfrom_command(Command *cm, int sock, unsigned short* port) {
-	// imposta indirizzo
-	struct sockaddr_in addr;
-	socklen_t addrlen = sizeof(addr);	
+int recvfrom_command(Command *cm, int sock, unsigned short *port) {
+    // imposta indirizzo
+    struct sockaddr_in addr;
+    socklen_t addrlen = sizeof(addr);
+    char buf[CMD_BUF_SIZE + 1];
 
-	// ricevi un comando
-    char buf[CMD_BUF_SIZE + 1] = {0};
-    int ret = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*) &addr, &addrlen);
-	if(ret < 0) return ret;
+    // ricevi un comando
+    int ret = recvfrom(sock, buf, CMD_BUF_SIZE, 0, (struct sockaddr *)&addr, &addrlen);
+    if (ret < 0) return ret;
 
-	// ottieni porta
-	*port = addr.sin_port;
+    buf[ret] = '\0';
 
-	// crea un comando
-	buf_to_cmd(buf, cm);
-	return ret;
+    // ottieni porta
+    *port = ntohs(addr.sin_port);
+
+    // crea un comando
+    buf_to_cmd(buf, cm);
+    return ret;
 }

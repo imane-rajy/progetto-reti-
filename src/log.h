@@ -5,6 +5,6 @@
 
 void log_evento(const char *fmt, ...);
 void stampa_log();
-void print_header(const char *s);
+void print_header(const char *s, int width);
 
 #endif

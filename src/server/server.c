@@ -1,12 +1,14 @@
 #include "server.h"
 #include "lavagna.h"
+#include "../log.h"
 #include <arpa/inet.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <string.h>
 #include <sys/select.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #define MAX_CLIENTS 30
 #define BUFFER_SIZE 1024
@@ -22,7 +24,7 @@ typedef struct {
 Client clients[MAX_CLIENTS] = {0};
 int num_client = 0;
 
-int listen_sock; 
+int listen_sock;
 
 pthread_mutex_t server_sock_m;
 pthread_mutex_t server_user_m;
@@ -31,7 +33,7 @@ void inserisci_client(int sock, unsigned short port) {
     pthread_mutex_lock(&server_sock_m);
 
     for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (clients[i].socket == 0){
+        if (clients[i].socket == 0) {
             clients[i].socket = sock;
             clients[i].port = port;
             break;
@@ -86,7 +88,7 @@ int get_socket(unsigned short port) {
     return 0;
 }
 
-int send_client(const Command *cm, unsigned short port) { 
+int send_client(const Command *cm, unsigned short port) {
     int sock = get_socket(port);
     if (sock == 0) return -1;
 
@@ -95,14 +97,14 @@ int send_client(const Command *cm, unsigned short port) {
     return ret;
 }
 
-void * ping_thread(void *arg __attribute__((unused))){
-    while(1){
+void *ping_thread(void *arg __attribute__((unused))) {
+    while (1) {
         sleep(1);
         gestici_ping(&server_user_m);
     }
 }
 
-void *select_thread(void *arg __attribute__((unused))){ 
+void *select_thread(void *arg __attribute__((unused))) {
     // inizializza multiplexing
     fd_set master_set, read_set;
     int fdmax;
@@ -123,9 +125,9 @@ void *select_thread(void *arg __attribute__((unused))){
 
         // scansiona con la select
         if (select(fdmax + 1, &read_set, NULL, NULL, NULL) < 0) {
-			printf("Errore nella select\n");
-			continue;
-		}
+            log_evento("Errore nella select\n");
+            continue;
+        }
 
         for (int i = 0; i <= fdmax; i++) {
             // controlla che si qualcosa da leggere
@@ -137,7 +139,7 @@ void *select_thread(void *arg __attribute__((unused))){
                 socklen_t client_len = sizeof(client_addr);
                 int client_sock = accept(listen_sock, (struct sockaddr *)&client_addr, &client_len);
                 if (client_sock < 0) {
-                    perror("Errore durante la accept");
+                    log_evento("Errore durante la accept: %s\n", strerror(errno));
                     continue;
                 }
 
@@ -149,7 +151,7 @@ void *select_thread(void *arg __attribute__((unused))){
                 unsigned short client_port = ntohs(client_addr.sin_port);
                 inserisci_client(client_sock, client_port);
 
-                printf("Connesso nuovo client con porta %d\n", client_port);
+                log_evento("Connesso nuovo client con porta %d\n", client_port);
             } else {
                 // gestisci client
                 int client_sock = i;
@@ -161,7 +163,7 @@ void *select_thread(void *arg __attribute__((unused))){
                 Command cmd = {0};
                 int ret = recv_command(&cmd, client_sock, NULL);
                 if (ret < 0) {
-                    perror("Errore nella recv");
+                    log_evento("Errore nella recv: %s\n", strerror(errno));
                     continue;
                 }
 
@@ -179,7 +181,7 @@ void *select_thread(void *arg __attribute__((unused))){
                         }
                     }
 
-                    printf("Client %d disconnesso\n", client_port);
+                    log_evento("Client %d disconnesso\n", client_port);
                     continue;
                 }
 
@@ -187,14 +189,12 @@ void *select_thread(void *arg __attribute__((unused))){
             }
         }
     }
-
-
 }
 
 int main() {
     // crea socket ascolto
     if ((listen_sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("Errore nella creazione del socket di ascolto");
+        log_evento("Errore nella creazione del socket di ascolto: %s\n", strerror(errno));
         return -1;
     }
 
@@ -213,24 +213,24 @@ int main() {
 
     // collega ad indirizzo server
     if (bind(listen_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        perror("Errore nella bind");
+        log_evento("Errore nella bind %s\n", strerror(errno));
         return -1;
     }
 
     // metti il socket di ascolto, in ascolto
     if (listen(listen_sock, 10) < 0) {
-        perror("Errore nella listen");
+        log_evento("Errore nella listen %s\n", strerror(errno));
         return -1;
     }
 
-    printf("Server TCP in ascolto sulla porta %d...\n", SERVER_PORT);
+    log_evento("Server TCP in ascolto sulla porta %d...\n", SERVER_PORT);
 
     // inizializza lavagna
     init_lavagna();
 
     pthread_t t_select, t_ping;
 
-    // thread che gestisce i client con la select 
+    // thread che gestisce i client con la select
     pthread_create(&t_select, NULL, select_thread, NULL);
 
     // thread che gestisce i ping
@@ -239,7 +239,7 @@ int main() {
     pthread_join(t_select, NULL);
     pthread_join(t_ping, NULL);
 
-	close(listen_sock);
- 
+    close(listen_sock);
+
     return 0;
 }

@@ -1,6 +1,6 @@
 #include "lavagna.h"
 #include "server.h"
-
+#include "../log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +9,10 @@ User users[MAX_USERS] = {0}; // array per gli utenti registrati
 int num_users = 0;
 
 int inserisci_user(unsigned short client) {
+	if(client < MIN_PORT_USERS || client >= MIN_PORT_USERS + MAX_USERS) {
+		return -2;
+	}
+
     int idx = client - MIN_PORT_USERS;
     if (users[idx].port == 0) {
         users[idx].port = client;
@@ -59,6 +63,8 @@ int request_user_list(User *user) {
         // verrà popolato in seguito
     };
 
+    log_evento("Inviata la lista dei client: ");
+
     // itera sui client
     int n = 0;
     for (int i = 0; i < MAX_USERS; i++) {
@@ -67,12 +73,15 @@ int request_user_list(User *user) {
         if (users[i].port != 0) {
             // copia id client nel buffer
             snprintf(client_ports[n], 6, "%d", users[i].port);
+            log_evento("%d ", users[i].port);
 
             // usa come argomento
             cm.args[n] = client_ports[n];
             n++;
         }
     }
+
+    log_evento("a %d\n", user->port);
 
     // invia risposta
     send_client(&cm, user->port);
@@ -88,8 +97,8 @@ void handle_card(User *user) {
         // solo se è in TO_DO
         if (cards[i].colonna != TO_DO) continue;
 
-		// solo non è già assegnata
-		if(cards[i].client != 0) continue;
+        // solo non è già assegnata
+        if (cards[i].client != 0) continue;
 
         // prendi la card
         Card *card = &cards[i];
@@ -108,7 +117,7 @@ void handle_card(User *user) {
         // invia lista utenti
         request_user_list(user);
 
-        printf("Assegnata card %d a client %d\n", card->id, user->port);
+        log_evento("Assegnata card %d a client %d\n", card->id, user->port);
         return;
     }
 }
@@ -137,7 +146,7 @@ int create_card(int id, Colonna colonna, const char *testo) {
     strncpy(cards[idx].testo, testo, MAX_TESTO - 1);
     cards[idx].testo[MAX_TESTO - 1] = '\0';
 
-    printf("Creata card %d: %s\n", id, testo);
+    log_evento("Creata card %d: %s\n", id, testo);
 
     handle_cards(); // fai il push della card
     return idx;
@@ -148,7 +157,7 @@ int hello(unsigned short client) {
     int idx = inserisci_user(client);
 
     if (idx >= 0) {
-        printf("Registrato client %d\n", client);
+        log_evento("Registrato client %d\n", client);
         handle_card(&users[idx]);
         return 0;
     }
@@ -193,17 +202,17 @@ int quit(User *user) {
         if (idx < 0) { return -1; }
 
         Card *card = &cards[idx];
-        
-		// annulla il suo utente
-		card->client = 0;
 
-		// mettila in TO_DO
+        // annulla il suo utente
+        card->client = 0;
+
+        // mettila in TO_DO
         if (card->colonna == DOING) {
             move_card(card->id, TO_DO);
             handle_cards(); // fai il push della card
         }
 
-        printf("Deregistrato client %d\n", port);
+        log_evento("Deregistrato client %d\n", port);
         return 0;
     }
 
@@ -227,7 +236,7 @@ int ack_card(User *user, int card_id) {
     cards[idx].colonna = DOING;
     user->state = BUSY;
 
-    printf("Ricevuto ACK per card %d\n", card_id);
+    log_evento("Ricevuto ACK per card %d\n", card_id);
     return 0;
 }
 
@@ -252,63 +261,60 @@ int card_done(User *user, int card_id) {
     // invia un altra card
     handle_card(user);
 
-    printf("Ricevuto CARD_DONE per card %d\n", card_id);
+    log_evento("Ricevuto CARD_DONE per card %d\n", card_id);
     return 0;
 }
 
 // logica di gestione ping
 
-int pong_lavagna(User* user) {
+int pong_lavagna(User *user) {
     user->ping_sent = 0;
     user->timer_ping = WAIT_TO_PING;
 
-	printf("Ricevuto PONG da utente, tutto ok\n");
-	return 0;
+    log_evento("Ricevuto PONG da utente, tutto ok\n");
+    return 0;
 }
 
-int gestici_ping(pthread_mutex_t *server_user_m){
+int gestici_ping(pthread_mutex_t *server_user_m) {
     pthread_mutex_lock(server_user_m);
 
-    for(int i = 0; i < MAX_USERS; i++){
-		// scansiona tutti gli utenti
-        User* user = &users[i];
-    	
-        if(user->port != 0 && user->state == BUSY){
-			// solo se registrato e ha una card in DOING
-			
-                if(!--user->timer_ping){
-                    // scatta il timer
-					if(!user->ping_sent){
-                    	// ping non già inviato
-						Command cmd = { .type = PING_USER };
-                        send_client(&cmd, user->port);
-                        user->ping_sent = 1;
-                        user->timer_ping = WAIT_FOR_PONG;
-                    
-						printf("Inviato PING a utente\n");
-					} else {
-						// ping già inviato, deregistra
-                        quit(user);
+    for (int i = 0; i < MAX_USERS; i++) {
+        // scansiona tutti gli utenti
+        User *user = &users[i];
 
-						printf("Utente non ha risposto a PING, lo deregistro\n");
-                    }
-				}
+        if (user->port != 0 && user->state == BUSY) {
+            // solo se registrato e ha una card in DOING
+
+            if (!--user->timer_ping) {
+                // scatta il timer
+                if (!user->ping_sent) {
+                    // ping non già inviato
+                    Command cmd = {.type = PING_USER};
+                    send_client(&cmd, user->port);
+                    user->ping_sent = 1;
+                    user->timer_ping = WAIT_FOR_PONG;
+
+                    log_evento("Inviato PING a utente\n");
+                } else {
+                    // ping già inviato, deregistra
+                    quit(user);
+
+                    log_evento("Utente non ha risposto a PING, lo deregistro\n");
+                }
             }
         }
-    
+    }
 
     pthread_mutex_unlock(server_user_m);
-	return 0;
+    return 0;
 }
 
 void gestisci_comando(const Command *cmd, unsigned short port) {
-    // mostra_lavagna();
-
     // controlla che si registrato o che si stia registrando adesso
     User *user = controlla_user(port);
 
     if (user == NULL && cmd->type != HELLO) {
-        printf("Ottenuto comando non HELLO (%d) da client non registrato %d\n", cmd->type, port);
+        log_evento("Ottenuto comando non HELLO (%d) da client non registrato %d\n", cmd->type, port);
         return;
     }
 
@@ -377,21 +383,20 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         break;
     }
 
-    if (ret < 0) { printf("Errore nell'esecuzione del comando %d del client %d\n", cmd->type, port); }
+    if (ret < 0) { log_evento("Errore nell'esecuzione del comando %d del client %d\n", cmd->type, port); }
+
+	// aggiorna interfaccia
+    mostra_lavagna();
 }
 
 void mostra_lavagna() {
-    // system("clear");
+    system("clear");
 
     // stampa header
     for (int c = 0; c < NUM_COLS; c++) {
-        printf("%-*s", COL_WIDTH, col_names[c]);
-    }
-    printf("\n");
-    for (int i = 0; i < NUM_COLS * COL_WIDTH; i++) {
-        printf("-");
-    }
-    printf("\n");
+    	print_header(col_names[c], COL_WIDTH);
+	}
+	printf("\n");
 
     // ottieni il numero di righe
     int max_rows = 0;
@@ -447,6 +452,11 @@ void mostra_lavagna() {
             printf("\n");
         }
     }
+    	
+	// stampa log
+	print_header("LOG", COL_WIDTH * 3);
+	printf("\n");
+	stampa_log();	
 }
 
 void init_lavagna() {
@@ -461,5 +471,5 @@ void init_lavagna() {
     create_card(9, TO_DO, "Analisi delle classi");
     create_card(10, TO_DO, "Implementare testing del software");
 
-    // mostra_lavagna();
+    mostra_lavagna();
 }
