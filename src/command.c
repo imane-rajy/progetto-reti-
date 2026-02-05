@@ -1,70 +1,8 @@
-#include "includes.h"
+#include "command.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
-
-void card_to_cmd(const Card *c, Command *cm) {
-	static char id[16], col[8], user[16];
-  	static char date[32], time[16];
-  	static char testo[MAX_TESTO];
-
-  	snprintf(id, sizeof(id), "%d", c->id);
-  	snprintf(col, sizeof(col), "%d", c->colonna);
-  	snprintf(user, sizeof(user), "%d", c->utente);
-
-	snprintf(date, sizeof(date), "%02d-%02d-%04d",
-		c->timestamp.tm_mday,
-		c->timestamp.tm_mon + 1,
-		c->timestamp.tm_year + 1900);
-
-  	snprintf(time, sizeof(time), "%02d:%02d:%02d",
-		c->timestamp.tm_hour,
-		c->timestamp.tm_min,
-		c->timestamp.tm_sec);
-
-  	strncpy(testo, c->testo, MAX_TESTO - 1);
-  	testo[MAX_TESTO - 1] = '\0';
-
-  	cm->args[0] = id;
-  	cm->args[1] = col;
-  	cm->args[2] = user;
-  	cm->args[3] = date;
-  	cm->args[4] = time;  	
-	cm->args[5] = testo;
-}
-
-int cmd_to_card(const Command *cm, Card *c) {
-	if (get_argc(cm) < 6) return -1;
-
-	int day, mon, year, hour, min, sec;
-
-	c->id = atoi(cm->args[0]);
-	c->colonna = (Colonna) atoi(cm->args[1]);
-	c->utente = atoi(cm->args[2]);
-
-	sscanf(cm->args[3], "%d-%d-%d", &day, &mon, &year);
-	sscanf(cm->args[4], "%d:%d:%d", &hour, &min, &sec);
-
-	c->timestamp.tm_mday = day;
-	c->timestamp.tm_mon = mon - 1;
-	c->timestamp.tm_year = year - 1900;
-	c->timestamp.tm_hour = hour;
-	c->timestamp.tm_min = min;
-	c->timestamp.tm_sec = sec;
-
-	char* pun = c->testo;
-	for(int i = 5; i < get_argc(cm); i++) {
-		const char* arg = cm->args[i];
-		
-		strcpy(pun, arg);
-		pun += strlen(arg);
-		
-		*pun++ = ' ';
-	}
-
-	return 0;
-}
 
 typedef struct {
     CommandType type;
@@ -102,7 +40,9 @@ CommandType str_to_type(const char *str) {
         return ERR;
 
     for (int i = 0; i < NUM_CMD_TYPES; i++) {
+		// controlla tutte le entrate della command table
         const CommandEntry *entry = &cmd_table[i];
+
         if (strcmp(entry->str, str) == 0) {
             return entry->type;
         }
@@ -111,14 +51,18 @@ CommandType str_to_type(const char *str) {
     return ERR;
 }
 
-const char *type_to_str(CommandType type) { return cmd_table[type].str; }
+const char *type_to_str(CommandType type) { 
+	return cmd_table[type].str; 
+}
 
 int get_argc(const Command *cm) {
+	// conta gli argomenti in un comando
     int i = 0;
     while (i < MAX_CMD_ARGS) {
         if (cm->args[i] == NULL) {
             break;
         }
+
         i++;
     }
 
@@ -151,7 +95,7 @@ void buf_to_cmd(char *buf, Command *cm) {
 }
 
 int send_command(const Command *cm, int sock, pthread_mutex_t *m) {
-    if (m != NULL) pthread_mutex_lock(m);
+    if (m != NULL) pthread_mutex_lock(m); // blocca socket
 
     // metti comando su buffer
     char buf[CMD_BUF_SIZE + 1] = {0};
@@ -161,16 +105,16 @@ int send_command(const Command *cm, int sock, pthread_mutex_t *m) {
     // invia buffer
     int ret = send(sock, &buf, strlen(buf), 0);
 
-    if (m != NULL) pthread_mutex_unlock(m);
+    if (m != NULL) pthread_mutex_unlock(m); // sblocca socket
 
     return ret;
 }
 
 int recv_command(Command *cm, int sock, pthread_mutex_t *m) {
-    static char recvbuf[1024]; 
-	static int recvidx = 0;
+    static char recvbuf[1024]; // buffer statico
+	static int recvidx = 0; // indice nel buffer
 
-	if (m != NULL) pthread_mutex_lock(m);
+	if (m != NULL) pthread_mutex_lock(m); // blocca socket
 
 	int ret;
 	while(1) {
@@ -199,7 +143,7 @@ int recv_command(Command *cm, int sock, pthread_mutex_t *m) {
 		if(done) break;
 	}
 
-    if (m != NULL) pthread_mutex_unlock(m);
+    if (m != NULL) pthread_mutex_unlock(m); // sblocca socket
 
 	return ret;
 }

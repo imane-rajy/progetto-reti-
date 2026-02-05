@@ -50,20 +50,6 @@ int rimuovi_user(unsigned short id) {
 
 #define COL_WIDTH 50
 
-const char *col_names[] = {"TO_DO", "DOING", "DONE"};
-
-Colonna str_to_col(const char *str) {
-    for (int i = 0; i < NUM_COLS; i++) {
-        if (strcmp(col_names[i], str) == 0) {
-            return i;
-        }
-    }
-
-    return 0;
-}
-
-const char *col_to_str(Colonna id) { return col_names[id]; }
-
 Card cards[MAX_CARDS] = {0};
 int num_card = 0;
 
