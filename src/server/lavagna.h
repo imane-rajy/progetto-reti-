@@ -26,7 +26,7 @@ typedef struct {
 } User;
 
 extern Card cards[MAX_CARDS];
-extern int num_card;
+extern int num_cards;
 
 void init_lavagna();
 void mostra_lavagna();
