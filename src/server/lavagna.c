@@ -151,13 +151,8 @@ int quit(User *user) {
 
     if (ret >= 0) {
         // TODO: controllare che non abbia delle card in Doing
-<<<<<<< HEAD
         if(user->card->colonna == DOING){
             user->card->colonna = TO_DO; 
-=======
-        if (user->card->colonna == DOING) {
-            user->card->colonna = TO_DO;
->>>>>>> 8e9fd27eae50401025249e1a46d4a710a6d37d5e
             handle_cards();
         }
 
