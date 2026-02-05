@@ -86,7 +86,13 @@ int get_card(unsigned short clients[MAX_CLIENTS], int *num_clients) {
 
     // fai l'ack della card
     printf("Invio l'ACK_CARD al server...\n");
-    Command ack = {.type = ACK_CARD};
+    
+    char id_str[6];
+    snprintf(id_str, 6, "%d", card.id);
+
+    Command ack = {.type = ACK_CARD,
+                   .args = id_str};
+    send_server(&ack);
     send_command(&ack, client_sock, &client_sock_m);
 
     // stampa card

@@ -273,15 +273,17 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         break;
     }
     case ACK_CARD: {
-        ret = ack_card(user);
+        int card_id = atoi(cmd->args[0]);
+        ret = ack_card(user, card_id);
         break;
     }
     case REQUEST_USER_LIST: {
+        int card_id = atoi(cmd->args[0]);
         ret = request_user_list(user);
         break;
     }
     case CARD_DONE: {
-        ret = card_done();
+        ret = card_done(user, card_id);
         break;
     }
     default:
