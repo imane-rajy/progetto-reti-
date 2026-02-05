@@ -6,6 +6,24 @@
 
 #define MAX_CARDS 100
 
+
+#define MAX_USERS 30
+
+typedef enum{
+
+    BUSY,
+    IDLE
+
+} UserState;
+
+
+typedef struct {
+    unsigned short id;
+    UserState state;
+
+} User;
+
+
 extern Card cards[MAX_CARDS];
 extern int num_card;
 

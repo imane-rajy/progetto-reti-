@@ -5,11 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_USERS 30
 
-typedef struct {
-    unsigned short id;
-} User;
 
 User users[MAX_USERS] = {0}; // array per i client registrati
 int num_user = 0;
@@ -20,6 +16,7 @@ int inserisci_user(unsigned short id) {
             continue;
 
         users[i].id = id;
+        users[i].state = IDLE;
         return i;
     }
 
@@ -29,7 +26,7 @@ int inserisci_user(unsigned short id) {
 
 int controlla_user(unsigned short id) {
     for (int i = 0; i < MAX_USERS; i++) {
-        if (users[i].id == id)
+        if (users[i].id == id && users[i].state == BUSY)
             return i;
     }
 
@@ -81,7 +78,10 @@ int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
 }
 
 
+void handle_cards(){
 
+
+}
 void handle_card(unsigned short client) {
 	for(int i = 0; i < MAX_CARDS; i++) {
 		if(cards[i].colonna != TO_DO) continue;
@@ -89,7 +89,7 @@ void handle_card(unsigned short client) {
 		Card* card = &cards[i];
 		card->client = client;
 		// TODO: aggiornare timestamp
-
+        
 		Command cmd = { .type = HANDLE_CARD };
 		card_to_cmd(card, &cmd);
 		send_client(&cmd, client);
