@@ -106,39 +106,44 @@ int send_command(const Command *cm, int sock, pthread_mutex_t *m) {
 }
 
 int recv_command(Command *cm, int sock, pthread_mutex_t *m) {
-    static char recvbuf[1024]; // buffer statico
-    static int recvidx = 0;    // indice nel buffer
+    static char recvbuf[1024];
+    static int start = 0; // start of valid data in buffer
+    static int end = 0;   // end of valid data in buffer
 
-    if (m != NULL) pthread_mutex_lock(m); // blocca socket
+    if (m) pthread_mutex_lock(m);
 
-    int ret;
+    int ret = 0;
+
     while (1) {
-        // prendi buffer
-        ret = recv(sock, recvbuf, sizeof(recvbuf), 0);
-
-        // gestisci errori di lettura
-        if (ret <= 0) break;
-
-        // aggiungi i byte letti
-        recvidx += ret;
-
-        int done = 0;
-        for (int i = 0; i < recvidx; i++) {
-            // se trovi \n è una linea
+        // scan for newline in the valid range
+        for (int i = start; i < end; i++) {
             if (recvbuf[i] == '\n') {
                 recvbuf[i] = '\0';
+                buf_to_cmd(recvbuf + start, cm);
 
-                // scrivi comando da buffer
-                buf_to_cmd(recvbuf, cm);
-                done = 1;
-                break;
+                // advance start past the processed line
+                start = i + 1;
+
+                if (start == end) {
+                    // buffer is empty now
+                    start = end = 0;
+                }
+
+                if (m) pthread_mutex_unlock(m);
+                return 1; // got a command
             }
         }
 
-        if (done) break;
+        // buffer full but no newline? drop everything
+        if (end == sizeof(recvbuf)) { start = end = 0; }
+
+        // read more data at the end
+        ret = recv(sock, recvbuf + end, sizeof(recvbuf) - end, 0);
+        if (ret <= 0) break; // closed or error
+
+        end += ret;
     }
 
-    if (m != NULL) pthread_mutex_unlock(m); // sblocca socket
-
-    return ret;
+    if (m) pthread_mutex_unlock(m);
+    return ret; // 0 = closed, -1 = error
 }

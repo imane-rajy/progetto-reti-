@@ -73,14 +73,23 @@ int cmd_to_card(const Command *cm, Card *c) {
 
     // copia tutti gli argomenti nel testo
     char *pun = c->testo;
-    for (int i = 5; i < get_argc(cm); i++) {
+    int argc = get_argc(cm);
+
+    for (int i = 5; i < argc; i++) {
         const char *arg = cm->args[i];
+        size_t len = strlen(arg);
+
+        // make sure we don't overflow c->testo (assume size MAX_TEXTO)
+        if ((pun - c->testo) + len >= MAX_TESTO - 1) break;
 
         strcpy(pun, arg);
-        pun += strlen(arg);
+        pun += len;
 
-        *pun++ = ' ';
+        if (i != argc - 1 && (pun - c->testo) < MAX_TESTO - 1) { *pun++ = ' '; }
     }
+
+    // null-terminate
+    *pun = '\0';
 
     return 0;
 }

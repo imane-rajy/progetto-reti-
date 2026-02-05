@@ -10,7 +10,8 @@ int num_users = 0;
 
 int inserisci_user(unsigned short client) {
     int idx = client - MIN_PORT_USERS;
-    if (users[idx].port != 0) {
+    if (users[idx].port == 0) {
+        users[idx].port = client;
         num_users++;
         return idx;
     }
@@ -44,31 +45,6 @@ int rimuovi_user(User *user) {
 Card cards[MAX_CARDS] = {0};
 int num_cards = 0;
 
-void handle_card(unsigned short client) {
-    for (int i = 0; i < MAX_CARDS; i++) {
-        if (cards[i].colonna != TO_DO) continue;
-
-        Card *card = &cards[i];
-        card->client = client;
-        int idx = MIN_PORT_USERS - client;
-        users[idx].state = ASSIGNED_CARD;
-        timestamp_card(card);
-
-        Command cmd = {.type = HANDLE_CARD};
-        card_to_cmd(card, &cmd);
-        send_client(&cmd, client);
-
-        printf("Assegnata card %d a client %d\n", card->id, client);
-        return;
-    }
-}
-
-void handle_cards() {
-    for (int i = 0; i < MAX_USERS; i++) {
-        if (users[i].state == IDLE) handle_card(users[i].port);
-    }
-}
-
 int request_user_list(User *user) {
     // prepara buffer per id client
     char client_ports[num_users][6]; // 5 caratteri + terminatore per 65535
@@ -79,8 +55,8 @@ int request_user_list(User *user) {
         // verrà popolato in seguito
     };
 
-    int n = 0;
     // itera sui client
+    int n = 0;
     for (int i = 0; i < MAX_USERS; i++) {
         if (user == &users[i]) { continue; }
 
@@ -109,6 +85,42 @@ int request_user_list(User *user) {
     return 0;
 }
 
+void handle_card(User *user) {
+    for (int i = 0; i < MAX_CARDS; i++) {
+        // solo se esiste
+        if (cards[i].id == 0) continue;
+
+        // solo se è in TO_DO
+        if (cards[i].colonna != TO_DO) continue;
+
+        // prendi la card
+        Card *card = &cards[i];
+
+        // assegnala al client
+        card->client = user->port;
+        user->state = ASSIGNED_CARD;
+        user->card_id = card->id;
+        timestamp_card(card);
+
+        // invia il comando HANDLE_CARD
+        Command cmd = {.type = HANDLE_CARD};
+        card_to_cmd(card, &cmd);
+        send_client(&cmd, user->port);
+
+        // invia lista utenti
+        request_user_list(user);
+
+        printf("Assegnata card %d a client %d\n", card->id, user->port);
+        return;
+    }
+}
+
+void handle_cards() {
+    for (int i = 0; i < MAX_USERS; i++) {
+        if (users[i].state == IDLE) handle_card(&users[i]);
+    }
+}
+
 int create_card(int id, Colonna colonna, const char *testo) {
     // verifica che l'id sia unico
     for (int i = 0; i < MAX_CARDS; i++) {
@@ -135,11 +147,11 @@ int create_card(int id, Colonna colonna, const char *testo) {
 
 int hello(unsigned short client) {
     // prova a registrate un utente
-    int ret = inserisci_user(client);
+    int idx = inserisci_user(client);
 
-    if (ret >= 0) {
+    if (idx >= 0) {
         printf("Registrato client %d\n", client);
-        handle_card(client);
+        handle_card(&users[idx]);
         return 0;
     }
 
@@ -186,7 +198,7 @@ int quit(User *user) {
         Card *card = &cards[idx];
         if (card->colonna == DOING) {
             move_card(card->id, TO_DO);
-            handle_cards(); // fai push della card
+            handle_cards(); // fai il push della card
         }
 
         printf("Deregistrato client %d\n", port);
@@ -213,6 +225,7 @@ int ack_card(User *user, int card_id) {
     cards[idx].colonna = DOING;
     user->state = BUSY;
 
+    printf("Ricevuto ACK per card %d\n", card_id);
     return 0;
 }
 
@@ -234,12 +247,16 @@ int card_done(User *user, int card_id) {
     user->state = IDLE;
     timestamp_card(&cards[idx]);
 
+    // invia un altra card
+    handle_card(user);
+
+    printf("Ricevuto CARD_DONE per card %d\n", card_id);
     return 0;
 }
 
 // GESTISCE IL COMANDO IN ARRIVO DAL CLIENT!!!!!!
 void gestisci_comando(const Command *cmd, unsigned short port) {
-    mostra_lavagna();
+    // mostra_lavagna();
 
     // controlla che si registrato o che si stia registrando adesso
     User *user = controlla_user(port);
@@ -249,13 +266,13 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         return;
     }
 
-    int ret;
+    int ret = -1;
 
     switch (cmd->type) {
     case CREATE_CARD: {
         int id = atoi(cmd->args[0]);
         Colonna colonna = str_to_col(cmd->args[1]);
-        const char *testo = cmd->args[2];
+        const char *testo = cmd->args[2]; // prendi tutti gli ultimi argomenti
 
         ret = create_card(id, colonna, testo);
         break;
@@ -273,16 +290,20 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         break;
     }
     case ACK_CARD: {
+        if (get_argc(cmd) < 1) break;
+
         int card_id = atoi(cmd->args[0]);
         ret = ack_card(user, card_id);
         break;
     }
     case REQUEST_USER_LIST: {
-        int card_id = atoi(cmd->args[0]);
         ret = request_user_list(user);
         break;
     }
     case CARD_DONE: {
+        if (get_argc(cmd) < 1) break;
+
+        int card_id = atoi(cmd->args[0]);
         ret = card_done(user, card_id);
         break;
     }
@@ -364,7 +385,7 @@ void mostra_lavagna() {
 
 void init_lavagna() {
     create_card(1, TO_DO, "Implementare integrazione per il pagamento");
-    create_card(2, TO_DO, "Implementare sito web servzio");
+    create_card(2, TO_DO, "Implementare sito web servizio");
     create_card(3, TO_DO, "Diagramma delle classi UML");
     create_card(4, TO_DO, "Studio dei requisiti dell'applicazione");
     create_card(5, TO_DO, "Realizzare CRC card");
@@ -374,5 +395,5 @@ void init_lavagna() {
     create_card(9, TO_DO, "Analisi delle classi");
     create_card(10, TO_DO, "Implementare testing del software");
 
-    mostra_lavagna();
+    // mostra_lavagna();
 }

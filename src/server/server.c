@@ -27,6 +27,7 @@ void inserisci_client(int sock, unsigned short port) {
 
         clients[i].socket = sock;
         clients[i].port = port;
+        return;
     }
 
     // errore: spazio esaurito

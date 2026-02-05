@@ -86,13 +86,13 @@ int get_card(unsigned short clients[MAX_CLIENTS], int *num_clients) {
 
     // fai l'ack della card
     printf("Invio l'ACK_CARD al server...\n");
-    
+
+    // prepara id
     char id_str[6];
     snprintf(id_str, 6, "%d", card.id);
 
-    Command ack = {.type = ACK_CARD,
-                   .args = id_str};
-    send_server(&ack);
+    // prepara ed invia comando ack
+    Command ack = {.type = ACK_CARD, .args = {id_str}};
     send_command(&ack, client_sock, &client_sock_m);
 
     // stampa card
@@ -135,9 +135,15 @@ int get_review(unsigned short client) {
     return 1; // per adesso dai sempre una valutazione positiva
 }
 
-void do_card() {
+void do_card(int card_id) {
     printf("Invio il CARD_DONE al server...\n");
-    Command ack = {.type = CARD_DONE};
+
+    // prepara id
+    char id_str[6];
+    snprintf(id_str, 6, "%d", card_id);
+
+    // prepara ed invia comando done
+    Command ack = {.type = CARD_DONE, .args = {id_str}};
     send_command(&ack, client_sock, &client_sock_m);
 }
 
@@ -167,7 +173,7 @@ void *listener_thread(void *arg __attribute__((unused))) {
         }
 
         // invia il card done
-        do_card();
+        do_card(id);
     }
 
     running = 0;
