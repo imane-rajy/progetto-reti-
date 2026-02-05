@@ -22,11 +22,8 @@ typedef enum {
 typedef struct {
     unsigned short port;
     UserState state;
-<<<<<<< HEAD
     Card* card;
 
-=======
->>>>>>> f1dcf491bd6a8f096f5b58e6b416c8ff3206ad52
 } User;
 
 extern Card cards[MAX_CARDS];

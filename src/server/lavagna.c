@@ -44,7 +44,6 @@ int rimuovi_user(User* user) {
 Card cards[MAX_CARDS] = {0};
 int num_cards = 0;
 
-<<<<<<< HEAD
 //int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
 //    int n = 0;
 //
@@ -56,19 +55,6 @@ int num_cards = 0;
 //
 //    return n; // ritorna quante card ci sono nel “sotto-array”
 //}
-=======
-int get_user_cards(unsigned short port, Card user_cards[MAX_CARDS]) {
-    int n = 0;
-
-    for (int i = 0; i < num_cards && n < MAX_CARDS; i++) {
-        if (cards[i].client == port) {
-            user_cards[n++] = cards[i]; // copio solo le card dell’utente
-        }
-    }
-
-    return n; // ritorna quante card ci sono nel “sotto-array”
-}
->>>>>>> f1dcf491bd6a8f096f5b58e6b416c8ff3206ad52
 
 void handle_card(unsigned short client) {
     for (int i = 0; i < MAX_CARDS; i++) {
@@ -177,14 +163,11 @@ int quit(User* user) {
 
     if (ret >= 0) {
         // TODO: controllare che non abbia delle card in Doing
-        Card *user_cards = {0};
-        int n = get_user_cards(port, user_cards);
-        for (int i = 0; i < n; i++) {
-            if (user_cards[i].colonna == DOING) { 
-                user_cards[i].colonna = TO_DO; 
-                handle_cards();
-            }
+        if(user->card.colonna == DOING){
+            user->card.colonna = TO_DO; 
+            handle_cards();
         }
+        
 
     	printf("Deregistrato client %d\n", port);
         return 0;
@@ -195,10 +178,18 @@ int quit(User* user) {
 
 int ack_card(User* user){
 
-
+    user->card.colonna = DOING;
+    user->state = BUSY;
+    return 0;
 
 }
 
+int card_done(User* user){
+
+    user->card.colonna = DONE;
+    user->state = IDLE;
+    return 0;
+}
 
 // GESTISCE IL COMANDO IN ARRIVO DAL CLIENT!!!!!!
 void gestisci_comando(const Command *cmd, unsigned short port) {
