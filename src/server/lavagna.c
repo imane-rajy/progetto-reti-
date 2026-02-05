@@ -23,7 +23,7 @@
 // tempo da aspettare prima di deregestrare un utente che non ha fatto PONG
 #define WAIT_FOR_PONG 10
 
-// gestione degli user
+// gestione degli utenti
 
 // rappresenta lo stato di un utente
 typedef enum { BUSY, IDLE, ASSIGNED_CARD } UserState;
@@ -71,10 +71,14 @@ int inserisci_user(unsigned short port) {
     return idx;
 }
 
-User *controlla_user(unsigned short client) {
-    int idx = client - MIN_PORT_USERS;
+// controlla che l'utente sia registrato o che si stia registrando
+User *controlla_user(unsigned short port) {
+    // ottieni l'indice dell'utente
+    int idx = USER_IDX(port);
+
+    // verifica che la porta corrisponda
     User *user = &users[idx];
-    if (user->port == client)
+    if (user->port == port)
         return user;
 
     // errore: user non presente
