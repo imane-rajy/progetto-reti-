@@ -71,7 +71,7 @@ int cmd_to_card(const Command *cm, Card *c) {
     c->timestamp.tm_min = min;
     c->timestamp.tm_sec = sec;
 
-    // copia tutti gli argomenti nel testo
+    // copia tutti gli ultimi argomenti nel testo
     char *pun = c->testo;
     int argc = get_argc(cm);
 
@@ -79,7 +79,7 @@ int cmd_to_card(const Command *cm, Card *c) {
         const char *arg = cm->args[i];
         size_t len = strlen(arg);
 
-        // make sure we don't overflow c->testo (assume size MAX_TEXTO)
+		// nel caso di overflow esci
         if ((pun - c->testo) + len >= MAX_TESTO - 1) break;
 
         strcpy(pun, arg);
@@ -88,7 +88,7 @@ int cmd_to_card(const Command *cm, Card *c) {
         if (i != argc - 1 && (pun - c->testo) < MAX_TESTO - 1) { *pun++ = ' '; }
     }
 
-    // null-terminate
+	// termina
     *pun = '\0';
 
     return 0;

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-User users[MAX_USERS] = {0}; // array per i client registrati
+User users[MAX_USERS] = {0}; // array per gli utenti registrati
 int num_users = 0;
 
 int inserisci_user(unsigned short client) {
@@ -47,7 +47,7 @@ int num_cards = 0;
 
 int request_user_list(User *user) {
     // prepara buffer per id client
-    char client_ports[num_users][6]; // 5 caratteri + terminatore per 65535
+    char client_ports[num_users][6];
 
     // prepara risposta
     Command cm = {
@@ -59,15 +59,6 @@ int request_user_list(User *user) {
     int n = 0;
     for (int i = 0; i < MAX_USERS; i++) {
         if (user == &users[i]) { continue; }
-
-        if (users[i].port != 0) {
-            // copia id client nel buffer
-            snprintf(client_ports[n], 6, "%d", users[i].port);
-
-            // usa come argomento
-            cm.args[n] = client_ports[n];
-            n++;
-        }
 
         if (users[i].port != 0) {
             // copia id client nel buffer
@@ -139,7 +130,7 @@ int create_card(int id, Colonna colonna, const char *testo) {
     strncpy(cards[idx].testo, testo, MAX_TESTO - 1);
     cards[idx].testo[MAX_TESTO - 1] = '\0';
 
-    printf("Creata card %d\n", id);
+    printf("Creata card %d: %s\n", id, testo);
 
     handle_cards(); // fai il push della card
     return idx;
@@ -254,7 +245,6 @@ int card_done(User *user, int card_id) {
     return 0;
 }
 
-// GESTISCE IL COMANDO IN ARRIVO DAL CLIENT!!!!!!
 void gestisci_comando(const Command *cmd, unsigned short port) {
     // mostra_lavagna();
 
@@ -272,7 +262,27 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
     case CREATE_CARD: {
         int id = atoi(cmd->args[0]);
         Colonna colonna = str_to_col(cmd->args[1]);
-        const char *testo = cmd->args[2]; // prendi tutti gli ultimi argomenti
+        
+		// copia tutti gli ultimi argomenti nel testo
+		char testo[MAX_TESTO];	
+		char *pun = testo;
+		int argc = get_argc(cmd);
+
+		for (int i = 2; i < argc; i++) {
+			const char *arg = cmd->args[i];
+			size_t len = strlen(arg);
+
+			// nel caso di overflow esci
+			if ((pun - testo) + len >= MAX_TESTO - 1) break;
+
+			strcpy(pun, arg);
+			pun += len;
+
+			if (i != argc - 1 && (pun - testo) < MAX_TESTO - 1) { *pun++ = ' '; }
+		}
+
+		// termina
+		*pun = '\0';
 
         ret = create_card(id, colonna, testo);
         break;
