@@ -36,13 +36,16 @@ CommandEntry cmd_table[] = {
     {ACK_REVIEW_CARD, "ACK_REVIEW_CARD"}};
 
 CommandType str_to_type(const char *str) {
-    if (str == NULL) return ERR;
+    if (str == NULL)
+        return ERR;
 
     for (int i = 0; i < NUM_CMD_TYPES; i++) {
         // controlla tutte le entrate della command table
         const CommandEntry *entry = &cmd_table[i];
 
-        if (strcmp(entry->str, str) == 0) { return entry->type; }
+        if (strcmp(entry->str, str) == 0) {
+            return entry->type;
+        }
     }
 
     return ERR;
@@ -56,7 +59,9 @@ int get_argc(const Command *cm) {
     // conta gli argomenti in un comando
     int i = 0;
     while (i < MAX_CMD_ARGS) {
-        if (cm->args[i] == NULL) { break; }
+        if (cm->args[i] == NULL) {
+            break;
+        }
 
         i++;
     }
@@ -90,7 +95,8 @@ void buf_to_cmd(char *buf, Command *cm) {
 }
 
 int send_command(const Command *cm, int sock, pthread_mutex_t *m) {
-    if (m != NULL) pthread_mutex_lock(m); // blocca socket
+    if (m != NULL)
+        pthread_mutex_lock(m); // blocca socket
 
     // metti comando su buffer
     char buf[CMD_BUF_SIZE + 1] = {0};
@@ -100,7 +106,8 @@ int send_command(const Command *cm, int sock, pthread_mutex_t *m) {
     // invia buffer
     int ret = send(sock, &buf, strlen(buf), 0);
 
-    if (m != NULL) pthread_mutex_unlock(m); // sblocca socket
+    if (m != NULL)
+        pthread_mutex_unlock(m); // sblocca socket
 
     return ret;
 }
@@ -111,7 +118,8 @@ int recv_command(Command *cm, int sock, pthread_mutex_t *m) {
     static int start = 0; // inizio di dati validi nel buffer
     static int end = 0;   // fine di dati validi nel buffer
 
-    if (m) pthread_mutex_lock(m); // blocca socket
+    if (m)
+        pthread_mutex_lock(m); // blocca socket
 
     int ret = 0;
 
@@ -127,25 +135,32 @@ int recv_command(Command *cm, int sock, pthread_mutex_t *m) {
                 start = i + 1;
 
                 // se è vuoto, riparti dall'origine
-                if (start == end) { start = end = 0; }
+                if (start == end) {
+                    start = end = 0;
+                }
 
                 // sblocca e restituisci il comando
-                if (m) pthread_mutex_unlock(m);
+                if (m)
+                    pthread_mutex_unlock(m);
                 return 1;
             }
         }
 
         // gestisci l'overlow svuotando il buffer
-        if (end == sizeof(recvbuf)) { start = end = 0; }
+        if (end == sizeof(recvbuf)) {
+            start = end = 0;
+        }
 
         // leggi altri dati se non c'è ancora un delimitatore
         ret = recv(sock, recvbuf + end, sizeof(recvbuf) - end, 0);
-        if (ret <= 0) break;
+        if (ret <= 0)
+            break;
 
         end += ret;
     }
 
-    if (m) pthread_mutex_unlock(m); // sblocca socket
+    if (m)
+        pthread_mutex_unlock(m); // sblocca socket
     return ret;
 }
 
@@ -166,7 +181,8 @@ int recvfrom_command(Command *cm, int sock, unsigned short *port) {
 
     // ricevi un comando
     int ret = recvfrom(sock, buf, CMD_BUF_SIZE, 0, (struct sockaddr *)&addr, &addrlen);
-    if (ret < 0) return ret;
+    if (ret < 0)
+        return ret;
 
     buf[ret] = '\0';
 

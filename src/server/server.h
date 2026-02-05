@@ -1,8 +1,9 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include "../command.h"
+#include "../utils/command.h"
 
-int send_client(const Command *cm, unsigned short port);
+// invia un comando ad un client identificato dalla sua porta
+int send_to_client(const Command *cmd, unsigned short port);
 
 #endif

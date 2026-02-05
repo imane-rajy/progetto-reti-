@@ -9,7 +9,9 @@ const char *col_names[] = {"TO_DO", "DOING", "DONE"};
 Colonna str_to_col(const char *str) {
     for (int i = 0; i < NUM_COLS; i++) {
         // controlla tutte le colonne
-        if (strcmp(col_names[i], str) == 0) { return i; }
+        if (strcmp(col_names[i], str) == 0) {
+            return i;
+        }
     }
 
     return 0;
@@ -30,7 +32,8 @@ void card_to_cmd(const Card *c, Command *cm) {
     snprintf(col, sizeof(col), "%d", c->colonna);
     snprintf(user, sizeof(user), "%d", c->client);
 
-    snprintf(date, sizeof(date), "%02d-%02d-%04d", c->timestamp.tm_mday, c->timestamp.tm_mon + 1, c->timestamp.tm_year + 1900);
+    snprintf(date, sizeof(date), "%02d-%02d-%04d", c->timestamp.tm_mday, c->timestamp.tm_mon + 1,
+             c->timestamp.tm_year + 1900);
 
     snprintf(time, sizeof(time), "%02d:%02d:%02d", c->timestamp.tm_hour, c->timestamp.tm_min, c->timestamp.tm_sec);
 
@@ -49,7 +52,8 @@ void card_to_cmd(const Card *c, Command *cm) {
 
 int cmd_to_card(const Command *cm, Card *c) {
     // controlla che ci siano abbastanza argomenti
-    if (get_argc(cm) < 6) return -1;
+    if (get_argc(cm) < 6)
+        return -1;
 
     // prendi campi banali
     c->id = atoi(cm->args[0]);
@@ -80,12 +84,15 @@ int cmd_to_card(const Command *cm, Card *c) {
         size_t len = strlen(arg);
 
         // nel caso di overflow esci
-        if ((pun - c->testo) + len >= MAX_TESTO - 1) break;
+        if ((pun - c->testo) + len >= MAX_TESTO - 1)
+            break;
 
         strcpy(pun, arg);
         pun += len;
 
-        if (i != argc - 1 && (pun - c->testo) < MAX_TESTO - 1) { *pun++ = ' '; }
+        if (i != argc - 1 && (pun - c->testo) < MAX_TESTO - 1) {
+            *pun++ = ' ';
+        }
     }
 
     // termina

@@ -1,36 +1,17 @@
 #ifndef LAVAGNA_H
 #define LAVAGNA_H
 
-#include "../card.h"
-#include "../command.h"
+#include "../utils/card.h"
+#include "../utils/command.h"
 #include <time.h>
 
-#define MAX_CARDS 100
-
-#define MAX_USERS 30
-#define MIN_PORT_USERS 5679
-#define MIN_NUM_USER_DONE 2
-
-#define WAIT_TO_PING 30
-#define WAIT_FOR_PONG 10
-
-typedef enum { BUSY, IDLE, ASSIGNED_CARD } UserState;
-
-typedef struct {
-    unsigned short port;
-    UserState state;
-    int card_id;
-    int timer_ping;
-    int ping_sent;
-} User;
-
-extern Card cards[MAX_CARDS];
-extern int num_cards;
-
+// inizializza la lavagna con le prime 10 card
 void init_lavagna();
-void mostra_lavagna();
 
+// gestisce un comando inviato da un certo client
 void gestisci_comando(const Command *cmd, unsigned short port);
-int gestici_ping(pthread_mutex_t *server_user_m);
+
+// chiamata ogni secondo per gestire i PING
+int gestisci_ping(pthread_mutex_t *server_user_m);
 
 #endif

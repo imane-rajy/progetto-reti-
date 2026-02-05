@@ -4,19 +4,20 @@ CC = gcc
 CFLAGS = -Wall -Wextra -I./src -g
 SRC_DIR = src
 
-CLIENT_SRC = $(SRC_DIR)/client/client.c $(SRC_DIR)/command.c $(SRC_DIR)/card.c $(SRC_DIR)/log.c 
-SERVER_SRC = $(SRC_DIR)/server/server.c $(SRC_DIR)/server/lavagna.c $(SRC_DIR)/command.c $(SRC_DIR)/card.c $(SRC_DIR)/log.c 
+CLIENT_SRC = $(SRC_DIR)/client/client.c  
+SERVER_SRC = $(SRC_DIR)/server/server.c $(SRC_DIR)/server/lavagna.c
+UTILS_SRC = $(SRC_DIR)/utils/command.c $(SRC_DIR)/utils/card.c $(SRC_DIR)/utils/log.c 
 
 CLIENT_OUT = utente 
 SERVER_OUT = lavagna
 
 all: $(CLIENT_OUT) $(SERVER_OUT)
 
-$(CLIENT_OUT): $(CLIENT_SRC)
+$(CLIENT_OUT): $(CLIENT_SRC) $(UTILS_SRC)
 	@printf "Compilo il client...\n"
 	@$(CC) $(CFLAGS) $^ -o $@
 
-$(SERVER_OUT): $(SERVER_SRC)
+$(SERVER_OUT): $(SERVER_SRC) $(UTILS_SRC)
 	@printf "Compilo il server...\n"
 	@$(CC) $(CFLAGS) $^ -o $@
 

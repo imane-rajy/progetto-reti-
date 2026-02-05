@@ -1,6 +1,6 @@
-#include "../card.h"
-#include "../command.h"
-#include "../log.h"
+#include "../utils/card.h"
+#include "../utils/command.h"
+#include "../utils/log.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <pthread.h>
@@ -24,7 +24,7 @@ int peer_sock;
 
 struct sockaddr_in peer_addr;
 
-pthread_mutex_t server_sock_m;
+pthread_mutex_t server_client_m;
 
 volatile int registered = 0;
 volatile int running = 1;
@@ -66,8 +66,9 @@ int pong_lavagna() {
     Command pong = {.type = PONG_LAVAGNA};
 
     // invia pong
-    int ret = send_command(&pong, server_sock, &server_sock_m);
-    if (ret < 0) return ret;
+    int ret = send_command(&pong, server_sock, &server_client_m);
+    if (ret < 0)
+        return ret;
 
     log_evento("Recivuto ping, risposto pong\n");
     return 0;
@@ -79,10 +80,12 @@ int switch_recv(Command *cm) {
         int ret = recv_command(cm, server_sock, NULL);
 
         // se c'è un errore o non è ping, restituisci
-        if (ret < 0 || cm->type != PING_USER) return ret;
+        if (ret < 0 || cm->type != PING_USER)
+            return ret;
 
         // altrimenti rispondi
-        if (pong_lavagna() < 0) return -1;
+        if (pong_lavagna() < 0)
+            return -1;
     }
 }
 
@@ -157,7 +160,7 @@ int get_card(unsigned short clients[MAX_CLIENTS], int *num_clients) {
 
     // prepara ed invia comando ack
     Command ack = {.type = ACK_CARD, .args = {id_str}};
-    send_command(&ack, server_sock, &server_sock_m);
+    send_command(&ack, server_sock, &server_client_m);
 
     // stampa card
     log_evento("Ottenuta card:\n");
@@ -166,8 +169,9 @@ int get_card(unsigned short clients[MAX_CLIENTS], int *num_clients) {
     log_evento("%s\n", card.testo);
 
     // stampa i dati della card
-    log_evento("ID:%d Client:%d %02d-%02d-%04d %02d:%02d:%02d\n", card.id, card.client, card.timestamp.tm_mday, card.timestamp.tm_mon + 1,
-               card.timestamp.tm_year + 1900, card.timestamp.tm_hour, card.timestamp.tm_min, card.timestamp.tm_sec);
+    log_evento("ID:%d Client:%d %02d-%02d-%04d %02d:%02d:%02d\n", card.id, card.client, card.timestamp.tm_mday,
+               card.timestamp.tm_mon + 1, card.timestamp.tm_year + 1900, card.timestamp.tm_hour, card.timestamp.tm_min,
+               card.timestamp.tm_sec);
 
     // restituisci solo l'indice
     return card.id;
@@ -177,7 +181,7 @@ int request_user_list(unsigned short clients[MAX_CLIENTS], int *num_clients) {
     // richiedi la lista utenti
     log_evento("Richiedo la lista di utenti...\n");
     Command req = {.type = REQUEST_USER_LIST};
-    send_command(&req, server_sock, &server_sock_m);
+    send_command(&req, server_sock, &server_client_m);
 
     // ottieni la lista utenti
     if (get_user_list(clients, num_clients) < 0) {
@@ -208,7 +212,7 @@ void do_card(int card_id) {
 
     // prepara ed invia comando done
     Command ack = {.type = CARD_DONE, .args = {id_str}};
-    send_command(&ack, server_sock, &server_sock_m);
+    send_command(&ack, server_sock, &server_client_m);
 }
 
 // gestione thread e socket
@@ -216,22 +220,23 @@ void do_card(int card_id) {
 #define COL_WIDTH 50
 
 void stampa_interfaccia() {
-    system("clear");
+    system("clear"); // ripulisce lo schermo
 
     // stampa i log
-    print_header("LOG", COL_WIDTH);
-	printf("\n");
-    stampa_log();
+    stampa_header("LOG", COL_WIDTH);
+    printf("\n");
+    stampa_eventi();
 
     // stampa la shell
-    print_header("SHELL", COL_WIDTH);
-	printf("\n");
+    stampa_header("SHELL", COL_WIDTH);
+    printf("\n");
     printf("$ ");
     fflush(stdout);
 }
 
 void *listener_thread(void *arg __attribute__((unused))) {
-    while (!registered) {} // aspetta di essere registrato
+    while (!registered) {
+    } // aspetta di essere registrato
 
     while (running) {
         unsigned short clients[MAX_CLIENTS]; // array per gli indici di client
@@ -239,7 +244,8 @@ void *listener_thread(void *arg __attribute__((unused))) {
 
         // ottieni card dal server
         int id = get_card(clients, &num_clients);
-        if (id < 0) break;
+        if (id < 0)
+            break;
 
         do {
             // aspetta
@@ -248,7 +254,8 @@ void *listener_thread(void *arg __attribute__((unused))) {
 
             // ottieni lista client
             int ret = request_user_list(clients, &num_clients);
-            if (ret < 0) break;
+            if (ret < 0)
+                break;
 
             log_evento("Ottenuti %d peer\n", num_clients);
         } while (num_clients < 1);
@@ -279,7 +286,9 @@ void *review_thread(void *arg __attribute__((unused))) {
         Command cmd = {0};
         unsigned short port;
         int ret = recvfrom_command(&cmd, peer_sock, &port);
-        if (ret < 0) { log_evento("Errore nella recv da peer\n"); }
+        if (ret < 0) {
+            log_evento("Errore nella recv da peer\n");
+        }
 
         switch (cmd.type) {
         case REVIEW_CARD:
@@ -312,21 +321,24 @@ void *console_thread(void *arg __attribute__((unused))) {
 
         // ottieni comando
         char buffer[BUFFER_SIZE];
-        if (fgets(buffer, sizeof(buffer), stdin) == NULL) continue;
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL)
+            continue;
         buffer[strcspn(buffer, "\n")] = '\0';
 
         // se è comand ovuoto non inviare
-        if (*buffer == '\0') continue;
+        if (*buffer == '\0')
+            continue;
 
         // interpreta comando
         Command cmd = {0};
         buf_to_cmd(buffer, &cmd);
 
         // se di HELLO, assumi che sia registrato
-        if (cmd.type == HELLO) registered = 1;
+        if (cmd.type == HELLO)
+            registered = 1;
 
         // invia il comando
-        if (send_command(&cmd, server_sock, &server_sock_m) < 0) {
+        if (send_command(&cmd, server_sock, &server_client_m) < 0) {
             perror("Errore nella send");
             running = 0;
             break;
@@ -354,7 +366,7 @@ int main(int argc, char *argv[]) {
         perror("Errore nella creazione del socket verso server");
         return -1;
     }
-    pthread_mutex_init(&server_sock_m, NULL);
+    pthread_mutex_init(&server_client_m, NULL);
 
     // rendi il socket verso server riutilizzabile (per debugging più veloce)
     int yes = 1;
@@ -419,7 +431,6 @@ int main(int argc, char *argv[]) {
     // inizializza mutex e condition variable per review
     review_ricevuti = 0;
     pthread_mutex_init(&review_m, NULL);
-    ;
     pthread_cond_init(&review_cond, NULL);
 
     // inizializza thread

@@ -1,12 +1,12 @@
 IndentWidth: 4
 TabWidth: 4
 UseTab: Never
-ColumnLimit: 140
+ColumnLimit: 120
 BasedOnStyle: LLVM
 
 AllowShortFunctionsOnASingleLine: None
-AllowShortIfStatementsOnASingleLine: true
-AllowShortBlocksOnASingleLine: true 
+AllowShortIfStatementsOnASingleLine: false
+AllowShortBlocksOnASingleLine: false 
 
 AlwaysBreakAfterDefinitionReturnType: None
 BraceWrapping:
