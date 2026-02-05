@@ -85,7 +85,7 @@ int get_card(unsigned short clients[MAX_CLIENTS], int *num_clients) {
     }
 
     // fai l'ack della card
-    printf("Invio l'ACK_CARD al server...");
+    printf("Invio l'ACK_CARD al server...\n");
     Command ack = {.type = ACK_CARD};
     send_command(&ack, client_sock, &client_sock_m);
 
@@ -101,7 +101,7 @@ int get_card(unsigned short clients[MAX_CLIENTS], int *num_clients) {
              card.timestamp.tm_mon + 1, card.timestamp.tm_year + 1900, card.timestamp.tm_hour, card.timestamp.tm_min,
              card.timestamp.tm_sec);
 
-    // stampa i dati dell card
+    // stampa i dati della card
     printf("%s\n", buffer);
 
     // restituisci solo l'indice
@@ -130,12 +130,12 @@ int get_review(unsigned short client) {
 }
 
 void do_card() {
-    printf("Invio il CARD_DONE al server...");
+    printf("Invio il CARD_DONE al server...\n");
     Command ack = {.type = CARD_DONE};
     send_command(&ack, client_sock, &client_sock_m);
 }
 
-void *listener_thread(void *arg) {
+void *listener_thread(void *arg __attribute__((unused))) {
     while (!registered) {}
 
     while (running) {
@@ -168,7 +168,7 @@ void *listener_thread(void *arg) {
     return NULL;
 }
 
-void *console_thread(void *arg) {
+void *console_thread(void *arg __attribute__((unused))) {
     char buffer[BUFFER_SIZE];
 
     while (running) {
