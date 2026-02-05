@@ -3,6 +3,6 @@
 
 #include "../command.h"
 
-void send_client(const Command *cm, unsigned short port);
+int send_client(const Command *cm, unsigned short port);
 
 #endif

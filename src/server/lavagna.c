@@ -8,41 +8,6 @@
 User users[MAX_USERS] = {0}; // array per gli utenti registrati
 int num_users = 0;
 
-
-int gestici_ping(pthread_mutex_t *server_user_m){
-
-    pthread_mutex_lock(server_user_m);
-    for(int i = 0; i < MAX_USERS; i++){
-
-        User* user = &users[i];
-        
-        if(user->port != 0){
-            
-            if(user->state == BUSY){
-                if(!--user->timer_ping){
-
-                    if(!user->ping_sent){
-                        Command cmd = { .type = PING_USER };
-                        send_client(&cm, user->port);
-                        user->ping_sent = 1;
-                        user->timer_ping = WAIT_FOR_PONG;
-                    }
-                    else{
-
-                        quit(user);
-
-                    }
-
-                }
-            }
-
-        }
-    }
-
-    pthread_mutex_unlock(server_user_m);
-}
-
-
 int inserisci_user(unsigned short client) {
     int idx = client - MIN_PORT_USERS;
     if (users[idx].port == 0) {
@@ -76,6 +41,8 @@ int rimuovi_user(User *user) {
     // errore: user non presente
     return -1;
 }
+
+// logica di gestione card
 
 #define COL_WIDTH 60
 
@@ -120,6 +87,9 @@ void handle_card(User *user) {
 
         // solo se è in TO_DO
         if (cards[i].colonna != TO_DO) continue;
+
+		// solo non è già assegnata
+		if(cards[i].client != 0) continue;
 
         // prendi la card
         Card *card = &cards[i];
@@ -222,8 +192,12 @@ int quit(User *user) {
         int idx = find_card(user->card_id);
         if (idx < 0) { return -1; }
 
-        // mettila in TO_DO
         Card *card = &cards[idx];
+        
+		// annulla il suo utente
+		card->client = 0;
+
+		// mettila in TO_DO
         if (card->colonna == DOING) {
             move_card(card->id, TO_DO);
             handle_cards(); // fai il push della card
@@ -282,11 +256,49 @@ int card_done(User *user, int card_id) {
     return 0;
 }
 
-int pong_lavagna(User* user) {
+// logica di gestione ping
 
+int pong_lavagna(User* user) {
     user->ping_sent = 0;
     user->timer_ping = WAIT_TO_PING;
 
+	printf("Ricevuto PONG da utente, tutto ok\n");
+	return 0;
+}
+
+int gestici_ping(pthread_mutex_t *server_user_m){
+    pthread_mutex_lock(server_user_m);
+
+    for(int i = 0; i < MAX_USERS; i++){
+		// scansiona tutti gli utenti
+        User* user = &users[i];
+    	
+        if(user->port != 0 && user->state == BUSY){
+			// solo se registrato e ha una card in DOING
+			
+                if(!--user->timer_ping){
+                    // scatta il timer
+					if(!user->ping_sent){
+                    	// ping non già inviato
+						Command cmd = { .type = PING_USER };
+                        send_client(&cmd, user->port);
+                        user->ping_sent = 1;
+                        user->timer_ping = WAIT_FOR_PONG;
+                    
+						printf("Inviato PING a utente\n");
+					} else {
+						// ping già inviato, deregistra
+                        quit(user);
+
+						printf("Utente non ha risposto a PING, lo deregistro\n");
+                    }
+				}
+            }
+        }
+    
+
+    pthread_mutex_unlock(server_user_m);
+	return 0;
 }
 
 void gestisci_comando(const Command *cmd, unsigned short port) {
@@ -340,7 +352,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         break;
     }
     case PONG_LAVAGNA: {
-        pong_lavagna(user);
+        ret = pong_lavagna(user);
         break;
     }
     case ACK_CARD: {

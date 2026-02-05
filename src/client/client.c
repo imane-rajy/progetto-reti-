@@ -360,7 +360,8 @@ int main(int argc, char *argv[]) {
 
     pthread_join(t_listener, NULL);
     pthread_join(t_console, NULL);
-    close(server_sock);
+
+	close(server_sock);
 
     return 0;
 }

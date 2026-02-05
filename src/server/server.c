@@ -22,11 +22,14 @@ typedef struct {
 Client clients[MAX_CLIENTS] = {0};
 int num_client = 0;
 
+int listen_sock; 
+
 pthread_mutex_t server_sock_m;
 pthread_mutex_t server_user_m;
 
 void inserisci_client(int sock, unsigned short port) {
     pthread_mutex_lock(&server_sock_m);
+
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (clients[i].socket == 0){
             clients[i].socket = sock;
@@ -34,12 +37,14 @@ void inserisci_client(int sock, unsigned short port) {
             break;
         }
     }
-    pthread_mutex_unlock(&server_sock_m);
+
     // errore: spazio esaurito
+    pthread_mutex_unlock(&server_sock_m);
 }
 
 void rimuovi_client(int sock) {
     pthread_mutex_lock(&server_sock_m);
+
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (clients[i].socket == sock) {
             clients[i].socket = 0;
@@ -81,36 +86,23 @@ int get_socket(unsigned short port) {
     return 0;
 }
 
-int send_client(const Command *cm, unsigned short port) {
-    
+int send_client(const Command *cm, unsigned short port) { 
     int sock = get_socket(port);
-    if (sock == 0) return;
+    if (sock == 0) return -1;
 
     int ret = send_command(cm, sock, &server_sock_m);
 
     return ret;
 }
 
-
-
-void * ping_thread(void *arg){
-
-
+void * ping_thread(void *arg __attribute__((unused))){
     while(1){
-
         sleep(1);
-        
         gestici_ping(&server_user_m);
     }
 }
 
-
-
-void *select_thread(void *arg){
-    
-    int listen_sock = *(int *)arg;
-
-
+void *select_thread(void *arg __attribute__((unused))){ 
     // inizializza multiplexing
     fd_set master_set, read_set;
     int fdmax;
@@ -130,7 +122,10 @@ void *select_thread(void *arg){
         read_set = master_set;
 
         // scansiona con la select
-        if (select(fdmax + 1, &read_set, NULL, NULL, NULL) < 0) { return -1; }
+        if (select(fdmax + 1, &read_set, NULL, NULL, NULL) < 0) {
+			printf("Errore nella select\n");
+			continue;
+		}
 
         for (int i = 0; i <= fdmax; i++) {
             // controlla che si qualcosa da leggere
@@ -196,13 +191,8 @@ void *select_thread(void *arg){
 
 }
 
-
-
-
-
 int main() {
     // crea socket ascolto
-    int listen_sock;
     if ((listen_sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("Errore nella creazione del socket di ascolto");
         return -1;
@@ -241,15 +231,15 @@ int main() {
     pthread_t t_select, t_ping;
 
     // thread che gestisce i client con la select 
-    pthread_create(&t_select, NULL, select_thread, &listen_sock);
+    pthread_create(&t_select, NULL, select_thread, NULL);
 
-    //thread che gestisci i ping
+    // thread che gestisce i ping
     pthread_create(&t_ping, NULL, ping_thread, NULL);
 
     pthread_join(t_select, NULL);
     pthread_join(t_ping, NULL);
 
-
+	close(listen_sock);
  
     return 0;
 }

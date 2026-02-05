@@ -8,21 +8,16 @@
 #define MAX_CARDS 100
 
 #define MAX_USERS 30
-
 #define MIN_PORT_USERS 5679
-
 #define MIN_NUM_USER_DONE 2
 
-#define WAIT_TO_PING 90
-
-#define WAIT_FOR_PONG 30
+#define WAIT_TO_PING 5
+#define WAIT_FOR_PONG 10
 
 typedef enum {
-
     BUSY,
     IDLE,
     ASSIGNED_CARD
-
 } UserState;
 
 typedef struct {
@@ -40,5 +35,6 @@ void init_lavagna();
 void mostra_lavagna();
 
 void gestisci_comando(const Command *cmd, unsigned short port);
+int gestici_ping(pthread_mutex_t *server_user_m);
 
 #endif
