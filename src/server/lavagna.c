@@ -166,7 +166,10 @@ int quit(User* user) {
         Card *user_cards = {0};
         int n = get_user_cards(port, user_cards);
         for (int i = 0; i < n; i++) {
-            if (user_cards[i].colonna == DOING) { user_cards[i].colonna = TO_DO; }
+            if (user_cards[i].colonna == DOING) { 
+                user_cards[i].colonna = TO_DO; 
+                handle_cards();
+            }
         }
 
     	printf("Deregistrato client %d\n", port);
