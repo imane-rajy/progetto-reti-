@@ -23,8 +23,7 @@ int num_client = 0;
 
 void inserisci_client(int sock, unsigned short port) {
     for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (clients[i].socket != 0)
-            continue;
+        if (clients[i].socket != 0) continue;
 
         clients[i].socket = sock;
         clients[i].port = port;
@@ -35,8 +34,7 @@ void inserisci_client(int sock, unsigned short port) {
 
 void rimuovi_client(int sock) {
     for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (clients[i].socket != sock)
-            continue;
+        if (clients[i].socket != sock) continue;
 
         clients[i].socket = 0;
     }
@@ -44,8 +42,7 @@ void rimuovi_client(int sock) {
 
 unsigned short get_port(int sock) {
     for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (clients[i].socket != sock)
-            continue;
+        if (clients[i].socket != sock) continue;
 
         return clients[i].port;
     }
@@ -55,8 +52,7 @@ unsigned short get_port(int sock) {
 
 int get_socket(unsigned short port) {
     for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (clients[i].port != port)
-            continue;
+        if (clients[i].port != port) continue;
 
         return clients[i].socket;
     }
@@ -65,10 +61,10 @@ int get_socket(unsigned short port) {
 }
 
 void send_client(const Command *cm, unsigned short port) {
-	int sock = get_socket(port);
-	if(sock == 0) return; 
+    int sock = get_socket(port);
+    if (sock == 0) return;
 
-	send_command(cm, sock, NULL);
+    send_command(cm, sock, NULL);
 }
 
 int main() {
@@ -125,15 +121,11 @@ int main() {
         read_set = master_set;
 
         // scansiona con la select
-        if (select(fdmax + 1, &read_set, NULL, NULL, NULL) < 0) {
-            return -1;
-        }
+        if (select(fdmax + 1, &read_set, NULL, NULL, NULL) < 0) { return -1; }
 
         for (int i = 0; i <= fdmax; i++) {
             // controlla che si qualcosa da leggere
-            if (!FD_ISSET(i, &read_set)) {
-                continue;
-            }
+            if (!FD_ISSET(i, &read_set)) { continue; }
 
             if (i == listen_sock) {
                 // accetta nuovo client
@@ -147,9 +139,7 @@ int main() {
 
                 // inserisci nel master set
                 FD_SET(client_sock, &master_set);
-                if (client_sock > fdmax) {
-                    fdmax = client_sock;
-                }
+                if (client_sock > fdmax) { fdmax = client_sock; }
 
                 // ottieni e registra porta
                 unsigned short client_port = ntohs(client_addr.sin_port);

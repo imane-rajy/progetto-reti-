@@ -1,4 +1,9 @@
 IndentWidth: 4
 TabWidth: 4
 UseTab: Never
-ColumnLimit: 400
+ColumnLimit: 140
+BasedOnStyle: LLVM
+
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: true
+AllowShortBlocksOnASingleLine: true 

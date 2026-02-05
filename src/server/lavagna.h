@@ -1,20 +1,17 @@
 #ifndef LAVAGNA_H
 #define LAVAGNA_H
 
-#include "../command.h"
 #include "../card.h"
+#include "../command.h"
 #include <time.h>
 
 #define MAX_CARDS 100
 
-
 #define MAX_USERS 30
 
-#define MIN_PORT_USERS  5679
+#define MIN_PORT_USERS 5679
 
-
-
-typedef enum{
+typedef enum {
 
     BUSY,
     IDLE,
@@ -22,13 +19,11 @@ typedef enum{
 
 } UserState;
 
-
 typedef struct {
     unsigned short port;
     UserState state;
 
 } User;
-
 
 extern Card cards[MAX_CARDS];
 extern int num_card;

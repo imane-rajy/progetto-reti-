@@ -1,6 +1,6 @@
 #include "command.h"
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 
@@ -36,32 +36,27 @@ CommandEntry cmd_table[] = {
     {ACK_REVIEW_CARD, "ACK_REVIEW_CARD"}};
 
 CommandType str_to_type(const char *str) {
-    if (str == NULL)
-        return ERR;
+    if (str == NULL) return ERR;
 
     for (int i = 0; i < NUM_CMD_TYPES; i++) {
-		// controlla tutte le entrate della command table
+        // controlla tutte le entrate della command table
         const CommandEntry *entry = &cmd_table[i];
 
-        if (strcmp(entry->str, str) == 0) {
-            return entry->type;
-        }
+        if (strcmp(entry->str, str) == 0) { return entry->type; }
     }
 
     return ERR;
 }
 
-const char *type_to_str(CommandType type) { 
-	return cmd_table[type].str; 
+const char *type_to_str(CommandType type) {
+    return cmd_table[type].str;
 }
 
 int get_argc(const Command *cm) {
-	// conta gli argomenti in un comando
+    // conta gli argomenti in un comando
     int i = 0;
     while (i < MAX_CMD_ARGS) {
-        if (cm->args[i] == NULL) {
-            break;
-        }
+        if (cm->args[i] == NULL) { break; }
 
         i++;
     }
@@ -82,8 +77,8 @@ void cmd_to_buf(const Command *cm, char *buf) {
     }
 }
 
-void buf_to_cmd(char *buf, Command *cm) { 
-	// tokenizza il tipo
+void buf_to_cmd(char *buf, Command *cm) {
+    // tokenizza il tipo
     char *token = strtok(buf, " ");
     cm->type = str_to_type(token);
 
@@ -100,7 +95,7 @@ int send_command(const Command *cm, int sock, pthread_mutex_t *m) {
     // metti comando su buffer
     char buf[CMD_BUF_SIZE + 1] = {0};
     cmd_to_buf(cm, buf);
-	buf[strlen(buf)] = '\n'; // delimitatore: a capo
+    buf[strlen(buf)] = '\n'; // delimitatore: a capo
 
     // invia buffer
     int ret = send(sock, &buf, strlen(buf), 0);
@@ -112,41 +107,38 @@ int send_command(const Command *cm, int sock, pthread_mutex_t *m) {
 
 int recv_command(Command *cm, int sock, pthread_mutex_t *m) {
     static char recvbuf[1024]; // buffer statico
-	static int recvidx = 0; // indice nel buffer
+    static int recvidx = 0;    // indice nel buffer
 
-	if (m != NULL) pthread_mutex_lock(m); // blocca socket
+    if (m != NULL) pthread_mutex_lock(m); // blocca socket
 
-	int ret;
-	while(1) {
-		// prendi buffer
-		ret = recv(sock, recvbuf, sizeof(recvbuf), 0);
-		
-		// gestisci errori di lettura
-		if (ret <= 0) break;
-		
-		// aggiungi i byte letti
-		recvidx += ret;
-		
-		int done = 0;
-		for (int i = 0; i < recvidx; i++) {
-			// se trovi \n è una linea
-			if (recvbuf[i] == '\n') {
-				recvbuf[i] = '\0';
-	
-				// scrivi comando da buffer
-				buf_to_cmd(recvbuf, cm);
-				done = 1;
-				break;
-			}
-		}	
+    int ret;
+    while (1) {
+        // prendi buffer
+        ret = recv(sock, recvbuf, sizeof(recvbuf), 0);
 
-		if(done) break;
-	}
+        // gestisci errori di lettura
+        if (ret <= 0) break;
+
+        // aggiungi i byte letti
+        recvidx += ret;
+
+        int done = 0;
+        for (int i = 0; i < recvidx; i++) {
+            // se trovi \n è una linea
+            if (recvbuf[i] == '\n') {
+                recvbuf[i] = '\0';
+
+                // scrivi comando da buffer
+                buf_to_cmd(recvbuf, cm);
+                done = 1;
+                break;
+            }
+        }
+
+        if (done) break;
+    }
 
     if (m != NULL) pthread_mutex_unlock(m); // sblocca socket
 
-	return ret;
+    return ret;
 }
-
-
-

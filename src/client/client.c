@@ -1,4 +1,5 @@
-#include "../includes.h"
+#include "../card.h"
+#include "../command.h"
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -13,6 +14,9 @@
 #define SERVER_ADDR "127.0.0.1"
 #define SERVER_PORT 5678
 
+#define MAX_SLEEP_TIME 5
+#define MAX_CLIENTS 30
+
 int client_sock;
 
 pthread_mutex_t client_sock_m;
@@ -20,76 +24,151 @@ pthread_mutex_t client_sock_m;
 volatile int registered = 0;
 volatile int running = 1;
 
-int get_card() {
-	// ottieni card 
-	Command cmd = {0};
+int get_user_list(unsigned short clients[MAX_CLIENTS], int *num_clients) {
+    // ottieni lista
+    Command cmd = {0};
     if (recv_command(&cmd, client_sock, &client_sock_m) < 0) {
-        perror("Errore nella receive");
-        running = 0;
-    	return -1;
-	}
-
-    if (cmd.type != HANDLE_CARD) {
-		printf("Ottenuto comando inaspettato (%d) per HANDLE_CARD\n", cmd.type);
-		running = 0;
-		return -1;
+        perror("Errore nella ricezione card");
+        return -1;
     }
 
-	Card card;
-	int ret = cmd_to_card(&cmd, &card);
-	
-	if(ret < 0) {
-		printf("Impossibile deserializzare card\n");
-		running = 0;
-		return -1;
-	}
+    if (cmd.type != SEND_USER_LIST) {
+        printf("Ottenuto comando inaspettato (%d) per HANDLE_CARD\n", cmd.type);
+        return -2;
+    }
 
-	// stampa card
-	printf("Ottenuta card:\n");
-	printf("%s\n", card.testo);
+    printf("Ottenuta lista di utenti: ");
 
-	char buffer[256];
-	snprintf(buffer, sizeof(buffer), "ID:%d Client:%d %02d-%02d-%04d %02d:%02d:%02d", card.id, card.utente, card.timestamp.tm_mday, card.timestamp.tm_mon + 1, card.timestamp.tm_year + 1900, card.timestamp.tm_hour, card.timestamp.tm_min, card.timestamp.tm_sec);
-	printf("%s\n", buffer);
+    // deserializza lista
+    *num_clients = 0;
+    for (int i = 0; i < get_argc(&cmd); i++) {
+        int cl = atoi(cmd.args[i]);
 
-	return card.id;
+        if (cl != 0) {
+            // riporta client
+            clients[(*num_clients)++] = cl;
+            printf("%d ", cl);
+        }
+    }
+
+    printf("\n");
+
+    return 0;
 }
 
-void *listener_thread(void *arg) {
-	while(!registered) {}
-
-    while (running) {
-        // effettua il ciclo della card:
-        // ottieni card dal server
-        int id = get_card();
-		
-		break;
-
-        // - aspetta
-        // int n = rand() % 30;
-        // sleep(n);
-        // // - ottieni lista client
-        // Command cmd = {.type = REQUEST_USER_LIST};
-        // if (send_command(&cmd, client_sock, &client_sock_m) < 0) {
-        //     perror("Errore nella send");
-        //     running = 0;
-        //     break;
-        // }
-
-        // if (recv_command(&cmd, buffer, client_sock, &client_sock_m) < 0) {
-        //     perror("Errore nella receive");
-        //     running = 0;
-        //     break;
-        // }
-
-        // - richiedi review ad ogni client
-        // - fai ack della card
+int get_card(unsigned short clients[MAX_CLIENTS], int *num_clients) {
+    // ottieni card
+    Command cmd = {0};
+    if (recv_command(&cmd, client_sock, &client_sock_m) < 0) {
+        perror("Errore nella ricezione card");
+        return -1;
     }
 
+    if (cmd.type != HANDLE_CARD) {
+        printf("Ottenuto comando inaspettato (%d) per HANDLE_CARD\n", cmd.type);
+        return -2;
+    }
+
+    // deserializza card
+    Card card;
+    int ret = cmd_to_card(&cmd, &card);
+
+    if (ret < 0) {
+        printf("Impossibile deserializzare card\n");
+        return -3;
+    }
+
+    // ottieni anche la lista utenti
+    if (get_user_list(clients, num_clients) < 0) {
+        printf("Impossibile ottenere lista utenti\n");
+        return -4;
+    }
+
+    // fai l'ack della card
+    printf("Invio l'ACK_CARD al server...\n");
+    Command ack = {.type = ACK_CARD};
+    send_command(&ack, client_sock, &client_sock_m);
+
+    // stampa card
+    printf("Ottenuta card:\n");
+
+    // stampa il testo
+    printf("%s\n", card.testo);
+
+    // imposta buffer per i dati della card
+    char buffer[256];
+    snprintf(buffer, sizeof(buffer), "ID:%d Client:%d %02d-%02d-%04d %02d:%02d:%02d", card.id, card.client, card.timestamp.tm_mday,
+             card.timestamp.tm_mon + 1, card.timestamp.tm_year + 1900, card.timestamp.tm_hour, card.timestamp.tm_min,
+             card.timestamp.tm_sec);
+
+    // stampa i dati della card
+    printf("%s\n", buffer);
+
+    // restituisci solo l'indice
+    return card.id;
+}
+
+int request_user_list(unsigned short clients[MAX_CLIENTS], int *num_clients) {
+    // richiedi la lista utenti
+    printf("Richiedo la lista di utenti...\n");
+    Command req = {.type = REQUEST_USER_LIST};
+    send_command(&req, client_sock, &client_sock_m);
+
+    // ottieni la lista utenti
+    if (get_user_list(clients, num_clients) < 0) {
+        printf("Impossibile ottenere lista utenti\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+int get_review(unsigned short client) {
+    // TODO: implementa
+    printf("Richiedo la review dell'utente %d...\n", client);
+    return 10; // per adesso dai sempre una valutazione positiva
+}
+
+void do_card() {
+    printf("Invio il CARD_DONE al server...\n");
+    Command ack = {.type = CARD_DONE};
+    send_command(&ack, client_sock, &client_sock_m);
+}
+
+void *listener_thread(void *arg __attribute__((unused))) {
+    while (!registered) {}
+
+    while (running) {
+        unsigned short clients[MAX_CLIENTS]; // array per gli indici di client
+        int num_clients;                     // numero di client ottenuti
+
+        // ottieni card dal server
+        int id = get_card(clients, &num_clients);
+        if (id < 0) break;
+
+        // aspetta
+        int n = rand() % MAX_SLEEP_TIME;
+        sleep(n);
+
+        // ottieni lista client
+        int ret = request_user_list(clients, &num_clients);
+        if (ret < 0) break;
+
+        // richiedi review ad ogni client
+        for (int i = 0; i < num_clients; i++) {
+            int rev = get_review(clients[i]);
+            if (rev < 0) break;
+        }
+
+        // invia il card done
+        do_card();
+    }
+
+    running = 0;
     return NULL;
 }
 
-void *console_thread(void *arg) {
+void *console_thread(void *arg __attribute__((unused))) {
     char buffer[BUFFER_SIZE];
 
     while (running) {
@@ -102,7 +181,7 @@ void *console_thread(void *arg) {
         Command cmd = {0};
         buf_to_cmd(buffer, &cmd);
 
-		if(cmd.type == HELLO) registered = 1;
+        if (cmd.type == HELLO) registered = 1;
 
         if (send_command(&cmd, client_sock, &client_sock_m) < 0) {
             perror("Errore nella send");
@@ -124,8 +203,8 @@ int main(int argc, char *argv[]) {
     // prendi porta
     unsigned short port = atoi(argv[1]);
 
-	// inizializza rand
-	srand(time(NULL) ^ port);
+    // inizializza rand
+    srand(time(NULL) ^ port);
 
     // crea socket
     if ((client_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
