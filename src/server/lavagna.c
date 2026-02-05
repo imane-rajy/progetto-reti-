@@ -128,6 +128,8 @@ int create_card(int id, Colonna colonna, const char *testo) {
     cards[idx].testo[MAX_TESTO - 1] = '\0';
 
     printf("Creata card %d\n", id);
+
+    handle_cards(); // fai il push della card
     return idx;
 }
 
@@ -144,33 +146,47 @@ int hello(unsigned short client) {
     return -1;
 }
 
-
-int find_card(int card_id){
-
-    for(int i = 0; i< MAX_CARDS; i++){
-        if(cards[i].id == card_id )
-            return i
+int find_card(int card_id) {
+    // scansiona le card
+    for (int i = 0; i < MAX_CARDS; i++) {
+        // restituisci l'indice dato l'id
+        if (cards[i].id == card_id) return i;
     }
+
     return -1;
 }
 
+int move_card(int card_id, Colonna to) {
+    // trova l'indice della card
+    int idx = find_card(card_id);
+    if (idx < 0) { return -1; }
+
+    // assicurati che non sia già li
+    if (cards[idx].colonna == to) { return -2; }
+
+    // sposta
+    cards[idx].colonna = to;
+    return 0;
+}
 
 int quit(User *user) {
-
+    // ricorda la porta
     int port = user->port;
 
+    // rimuovi l'utente
     int ret = rimuovi_user(user);
 
+    // se ha avuto successo, rimuovi la sua card
     if (ret >= 0) {
-        // TODO: controllare che non abbia delle card in Doing
-        int idx = find_card(user->card);
-        if(idx < 0){
-            return -1;
-        }
-        Card* card = &cards[idx];
-        if(card->colonna == DOING){
-            move_card(card->id, TODO);
-            handle_cards();
+        // trova la sua card
+        int idx = find_card(user->card_id);
+        if (idx < 0) { return -1; }
+
+        // mettila in TO_DO
+        Card *card = &cards[idx];
+        if (card->colonna == DOING) {
+            move_card(card->id, TO_DO);
+            handle_cards(); // fai push della card
         }
 
         printf("Deregistrato client %d\n", port);
@@ -180,59 +196,44 @@ int quit(User *user) {
     return -1;
 }
 
-
-
-int move_card(int card_id, Colonna to){
-
-    int idx = find_card(card_id);
-
-    if(idx < 0){
-        return -1;
-    }
-
-    if(cards[idx].colonna == to){
-        return ;
-    }
-    
-    card[idx].colonna = to;
-    return 0;
-
-}
-
 int ack_card(User *user, int card_id) {
+    // controlla che sia stata assegnata una card
+    if (user->state != ASSIGNED_CARD) return -1;
 
-    if(user->state != ASSIGNED_CARD)
-        return -1;
+    // ottieni la card
+    int idx = find_card(user->card_id);
 
-    if(user->card->id != card_id){
-        return -1;
-    }
+    // controlla che l'id corrisponda
+    if (cards[idx].id != card_id) { return -1; }
 
-    if(user->card->colonna != TODO){
-        return -1;
-    }
-    user->card->colonna = DOING;
+    // controlla che la card siain TO_DO
+    if (cards[idx].colonna != TO_DO) { return -1; }
+
+    // aggiorna lo stato della card e dell'utente
+    cards[idx].colonna = DOING;
     user->state = BUSY;
+
     return 0;
 }
 
 int card_done(User *user, int card_id) {
+    // controlla che stia gestendo una card
+    if (user->state != BUSY) { return -1; }
 
-    if(user->state != BUSY){
-        return -1;
-    }
-    
-    if(user->card->id != card_id){
-        return -1;
-    }
+    // ottieni la card
+    int idx = find_card(user->card_id);
 
-    if(user->card->colonna != DOING){
-        return -1;
-    }
+    // controlla che l'id corrisponda
+    if (cards[idx].id != card_id) { return -1; }
 
+    // controlla che la card sia in DOING
+    if (cards[idx].colonna != DOING) { return -1; }
 
-    user->card->colonna = DONE;
+    // aggiorna lo stato della card e dell'utente
+    cards[idx].colonna = DONE;
     user->state = IDLE;
+    timestamp_card(&cards[idx]);
+
     return 0;
 }
 

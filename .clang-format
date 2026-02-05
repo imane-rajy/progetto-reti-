@@ -7,3 +7,7 @@ BasedOnStyle: LLVM
 AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: true
 AllowShortBlocksOnASingleLine: true 
+
+AlwaysBreakAfterDefinitionReturnType: None
+BraceWrapping:
+  AfterControlStatement: Always
