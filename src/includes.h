@@ -68,10 +68,11 @@ typedef struct {
     int id;
     Colonna colonna;
     char testo[MAX_TESTO];
-    int utente;
+    unsigned short client;
     struct tm timestamp;
 } Card;
 
+int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]);
 void card_to_cmd(const Card *c, Command *cm);
 int cmd_to_card(const Command *cm, Card *c);
 

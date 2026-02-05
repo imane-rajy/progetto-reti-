@@ -11,36 +11,44 @@ typedef struct {
     unsigned short id;
 } User;
 
-User users[MAX_USERS] = {0};
+User users[MAX_USERS] = {0}; //array per i client registrati
 int num_user = 0;
 
-void inserisci_user(unsigned short id) {
+int inserisci_user(unsigned short id) {
     for (int i = 0; i < MAX_USERS; i++) {
         if (users[i].id != 0)
             continue;
 
         users[i].id = id;
+        return i;
     }
 
     // errore: spazio esaurito
+    return -1;
+
+   
 }
 
-void rimuovi_user(unsigned short id) {
-    for (int i = 0; i < MAX_USERS; i++) {
-        if (users[i].id != id)
-            continue;
+int rimuovi_user(unsigned short id) {
 
+    int i = controlla_user(id);
+    if(i >= 0){
         users[i].id = 0;
+        return 1;
     }
+
+    // errore: user non presente
+    return -1;
 }
 
 int controlla_user(unsigned short id) {
     for (int i = 0; i < MAX_USERS; i++) {
         if (users[i].id == id)
-            return 1;
+            return i;
     }
 
-    return 0;
+    // errore: user non presente
+    return -1;
 }
 
 #define COL_WIDTH 50
@@ -67,7 +75,7 @@ void handle_card(unsigned short client) {
 		if(cards[i].colonna != TO_DO) continue;
 
 		Card* card = &cards[i];
-		card->utente = client;
+		card->client = client;
 		// TODO: aggiornare timestamp
 
 		Command cmd = { .type = HANDLE_CARD };
@@ -101,35 +109,57 @@ int create_card(int id, Colonna colonna, const char *testo, unsigned short clien
     strncpy(cards[idx].testo, testo, MAX_TESTO - 1);
     cards[idx].testo[MAX_TESTO - 1] = '\0';
 
-    cards[idx].utente = client;
+    cards[idx].client = client;
 
     printf("Creata card %d di client %d\n", id, client);
     return idx;
 }
 
 int hello(unsigned short client) {
-    inserisci_user(client);
-    printf("Registrato client %d\n", client);
-	
-	handle_card(client);
 
-    return 0;
+    // prova a registrate un utente
+    int ret = inserisci_user(client);
+
+    if(ret >= 0){
+
+        printf("Registrato client %d\n", client);
+        handle_card(client);
+        return 0;
+       
+    }
+
+    return -1;
+   
 }
 
 int quit(unsigned short client) {
-    rimuovi_user(client);
 
-    printf("Deregistrato client %d\n", client);
-    return 0;
+    int ret = rimuovi_user(client);
+
+    if(ret >= 0 ){
+        // TODO: controllare che non abbia delle card in Doing
+        Card* user_cards = {0};
+        int n = get_user_cards(client, user_cards);
+        for(int i=0; i < n; i++){
+            if(user_cards[i].colonna == DOING) {
+                user_cards[i].colonna = TODO;
+            }
+        }
+        printf("Deregistrato client %d\n", client);
+        return 0;
+    }
+
 }
 
 void gestisci_comando(const Command *cmd, unsigned short port) {
     mostra_lavagna();
 
-    if (controlla_user(port) == 0 && cmd->type != HELLO) {
+    if (controlla_user(port) >= 0 && cmd->type != HELLO) {
         printf("Ottenuto comando non HELLO (%d) da client non registrato %d\n", cmd->type, port);
         return;
     }
+
+    int ret;
 
     switch (cmd->type) {
     case CREATE_CARD: {
@@ -139,15 +169,15 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
 
         unsigned short client = port;
 
-        create_card(id, colonna, testo, client);
+        ret = create_card(id, colonna, testo, client);
         break;
     }
     case HELLO: {
-        hello(port);
+        ret = hello(port);
         break;
     }
     case QUIT: {
-        quit(port);
+        ret = quit(port);
         break;
     }
     case PONG_LAVAGNA: {
@@ -220,7 +250,7 @@ void mostra_lavagna() {
 
                     // colonna 1: altri dati
                     case 1:
-                        snprintf(buf, sizeof(buf), "ID:%d Client:%d %02d-%02d-%04d %02d:%02d:%02d", card->id, card->utente, card->timestamp.tm_mday, card->timestamp.tm_mon + 1, card->timestamp.tm_year + 1900, card->timestamp.tm_hour, card->timestamp.tm_min, card->timestamp.tm_sec);
+                        snprintf(buf, sizeof(buf), "ID:%d Client:%d %02d-%02d-%04d %02d:%02d:%02d", card->id, card->client, card->timestamp.tm_mday, card->timestamp.tm_mon + 1, card->timestamp.tm_year + 1900, card->timestamp.tm_hour, card->timestamp.tm_min, card->timestamp.tm_sec);
 
                         buf[COL_WIDTH] = '\0';
                         printf("%-*s", COL_WIDTH, buf);
