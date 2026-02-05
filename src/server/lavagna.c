@@ -93,7 +93,7 @@ void handle_card(unsigned short client) {
 }
 
 int request_user_list(User *user) {
-    
+
   // prepara buffer per id client
   char client_ports[num_users][6]; // 5 caratteri + terminatore per 65535
 
@@ -110,9 +110,9 @@ int request_user_list(User *user) {
             continue;
         }
 
-    if (users[i].port != 0){
+    if (users[i]->port != 0){
       // copia id client nel buffer
-      snprintf(client_ports[n], 6, "%d", users[i].port);
+      snprintf(client_ports[n], 6, "%d", users[i]->port);
 
       // usa come argomento
       cm.args[n] = client_ports[n];
@@ -124,7 +124,7 @@ int request_user_list(User *user) {
   cm.args[n++] = "fornita lista utenti registrati";
 
   // invia risposta
-  send_client(cl->id, &cm);
+  send_client(&cm, user->port);
 
   return 0;
 }
