@@ -11,7 +11,7 @@ typedef struct {
     unsigned short id;
 } User;
 
-User users[MAX_USERS] = {0}; //array per i client registrati
+User users[MAX_USERS] = {0}; // array per i client registrati
 int num_user = 0;
 
 int inserisci_user(unsigned short id) {
@@ -25,26 +25,23 @@ int inserisci_user(unsigned short id) {
 
     // errore: spazio esaurito
     return -1;
-
-   
-}
-
-int rimuovi_user(unsigned short id) {
-
-    int i = controlla_user(id);
-    if(i >= 0){
-        users[i].id = 0;
-        return 1;
-    }
-
-    // errore: user non presente
-    return -1;
 }
 
 int controlla_user(unsigned short id) {
     for (int i = 0; i < MAX_USERS; i++) {
         if (users[i].id == id)
             return i;
+    }
+
+    // errore: user non presente
+    return -1;
+}
+
+int rimuovi_user(unsigned short id) {
+    int i = controlla_user(id);
+    if(i >= 0){
+        users[i].id = 0;
+        return 1;
     }
 
     // errore: user non presente
@@ -116,24 +113,19 @@ int create_card(int id, Colonna colonna, const char *testo, unsigned short clien
 }
 
 int hello(unsigned short client) {
-
     // prova a registrate un utente
     int ret = inserisci_user(client);
 
     if(ret >= 0){
-
         printf("Registrato client %d\n", client);
         handle_card(client);
         return 0;
-       
     }
 
     return -1;
-   
 }
 
 int quit(unsigned short client) {
-
     int ret = rimuovi_user(client);
 
     if(ret >= 0 ){
@@ -142,9 +134,10 @@ int quit(unsigned short client) {
         int n = get_user_cards(client, user_cards);
         for(int i=0; i < n; i++){
             if(user_cards[i].colonna == DOING) {
-                user_cards[i].colonna = TODO;
+                user_cards[i].colonna = TO_DO;
             }
         }
+
         printf("Deregistrato client %d\n", client);
         return 0;
     }

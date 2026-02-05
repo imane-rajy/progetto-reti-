@@ -204,8 +204,6 @@ int recv_command(Command *cm, int sock, pthread_mutex_t *m) {
 	return ret;
 }
 
-
-
 int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
 
     int n = 0;
