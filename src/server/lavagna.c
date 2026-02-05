@@ -6,34 +6,33 @@
 #include <string.h>
 
 User users[MAX_USERS] = {0}; // array per i client registrati
-int num_user = 0;
+int num_users = 0;
 
 int inserisci_user(unsigned short client) {
-
     int idx = client - MIN_PORT_USERS;
     if (users[idx].port != 0) {
-        num_user++;
-        return i;
+        num_users++;
+        return idx;
     }
 
     // errore: spazio esaurito
     return -1;
 }
 
-int controlla_user(unsigned short client) {
-
+User* controlla_user(unsigned short client) {
     int idx = client - MIN_PORT_USERS;
-    if (users[idx].port == client && users[idx].state == BUSY) return idx;
+    User* user = &users[idx];
+	if (user->port == client) return user;
 
     // errore: user non presente
-    return -1;
+    return NULL;
 }
 
 int rimuovi_user(unsigned short client) {
-    int idx = controlla_user(client);
-    if (idx >= 0) {
-        users[i].port = 0;
-        num_user--;
+    User* user = controlla_user(client);
+    if (user != NULL) {
+        user->port = 0;
+        num_users--;
         return 1;
     }
 
@@ -41,16 +40,15 @@ int rimuovi_user(unsigned short client) {
     return -1;
 }
 
-#define COL_WIDTH 50
+#define COL_WIDTH 60
 
 Card cards[MAX_CARDS] = {0};
-int num_card = 0;
+int num_cards = 0;
 
 int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
-
     int n = 0;
 
-    for (int i = 0; i < num_card && n < MAX_CARDS; i++) {
+    for (int i = 0; i < num_cards && n < MAX_CARDS; i++) {
         if (cards[i].client == client) {
             user_cards[n++] = cards[i]; // copio solo le card dell’utente
         }
@@ -59,12 +57,6 @@ int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
     return n; // ritorna quante card ci sono nel “sotto-array”
 }
 
-void handle_cards() {
-
-    for (int i = 0; i < MAX_USERS; i++) {
-        if (users[i].state == IDLE) handle_card(users[i].port);
-    }
-}
 void handle_card(unsigned short client) {
     for (int i = 0; i < MAX_CARDS; i++) {
         if (cards[i].colonna != TO_DO) continue;
@@ -84,16 +76,18 @@ void handle_card(unsigned short client) {
     }
 }
 
+void handle_cards() {
+    for (int i = 0; i < MAX_USERS; i++) {
+        if (users[i].state == IDLE) handle_card(users[i].port);
+    }
+}
+
 int request_user_list(User *user) {
-
-  // prepara buffer per id client
-  char client_ports[num_users][6]; // 5 caratteri + terminatore per 65535
-
     // prepara buffer per id client
     char client_ports[num_users][6]; // 5 caratteri + terminatore per 65535
 
     // prepara risposta
-    cmd cm = {
+    Command cm = {
         .type = SEND_USER_LIST
         // verrà popolato in seguito
     };
@@ -112,9 +106,9 @@ int request_user_list(User *user) {
             n++;
         }
 
-        if (users[i]->port != 0){
+        if (users[i].port != 0){
             // copia id client nel buffer
-            snprintf(client_ports[n], 6, "%d", users[i]->port);
+            snprintf(client_ports[n], 6, "%d", users[i].port);
 
             // usa come argomento
             cm.args[n] = client_ports[n];
@@ -122,24 +116,21 @@ int request_user_list(User *user) {
         }
     }
 
-    // metti commento nell'ultimo argomento
-    cm.args[n++] = "fornita lista utenti registrati";
-
-  // invia risposta
-  send_client(&cm, user->port);
+  	// invia risposta
+  	send_client(&cm, user->port);
 
     return 0;
 }
 
-int create_card(int id, Colonna colonna, const char *testo, unsigned short client) {
+int create_card(int id, Colonna colonna, const char *testo) {
     // verifica che l'id sia unico
     for (int i = 0; i < MAX_CARDS; i++) {
         if (cards[i].id == id) { return -1; }
     }
 
     // alloca la card
-    int idx = num_card;
-    num_card++;
+    int idx = num_cards;
+    num_cards++;
     if (idx >= MAX_CARDS) { return -2; }
 
     // imposta i dati della card
@@ -149,9 +140,7 @@ int create_card(int id, Colonna colonna, const char *testo, unsigned short clien
     strncpy(cards[idx].testo, testo, MAX_TESTO - 1);
     cards[idx].testo[MAX_TESTO - 1] = '\0';
 
-    cards[idx].client = client;
-
-    printf("Creata card %d di client %d\n", id, client);
+    printf("Creata card %d\n", id);
     return idx;
 }
 
@@ -192,7 +181,10 @@ int quit(unsigned short client) {
 void gestisci_comando(const Command *cmd, unsigned short port) {
     mostra_lavagna();
 
-    if (controlla_user(port) < 0 && cmd->type != HELLO) {
+	// controlla che si registrato o che si stia registrando adesso
+	User* user = controlla_user(port);
+
+    if (user == NULL && cmd->type != HELLO) {
         printf("Ottenuto comando non HELLO (%d) da client non registrato %d\n", cmd->type, port);
         return;
     }
@@ -205,9 +197,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         Colonna colonna = str_to_col(cmd->args[1]);
         const char *testo = cmd->args[2];
 
-        unsigned short client = port;
-
-        ret = create_card(id, colonna, testo, client);
+        ret = create_card(id, colonna, testo);
         break;
     }
     case HELLO: {
@@ -227,7 +217,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         break;
     }
     case REQUEST_USER_LIST: {
-        // request_user_list();
+        ret = request_user_list(user);
         break;
     }
     case CARD_DONE: {
@@ -237,6 +227,10 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
     default:
         break;
     }
+
+	if(ret < 0) {
+		printf("Errore nell'esecuzione del comando %d del client %d\n", cmd->type, port);
+	}
 }
 
 void mostra_lavagna() {
@@ -255,7 +249,7 @@ void mostra_lavagna() {
     // ottieni il numero di righe
     int max_rows = 0;
     int col_counts[NUM_COLS] = {0};
-    for (int i = 0; i < num_card; i++) {
+    for (int i = 0; i < num_cards; i++) {
         col_counts[cards[i].colonna]++;
         if (col_counts[cards[i].colonna] > max_rows) max_rows = col_counts[cards[i].colonna];
     }
@@ -263,7 +257,7 @@ void mostra_lavagna() {
     // realizza una tabella di puntatori a card organizzata per colonne
     Card *col_cards[NUM_COLS][MAX_CARDS] = {0};
     int col_index[NUM_COLS] = {0};
-    for (int i = 0; i < num_card; i++) {
+    for (int i = 0; i < num_cards; i++) {
         Colonna col = cards[i].colonna;
         col_cards[col][col_index[col]++] = &cards[i];
     }
@@ -281,7 +275,6 @@ void mostra_lavagna() {
                     // colonna 0: testo
                     case 0:
                         strncpy(buf, card->testo, COL_WIDTH);
-                        buf[COL_WIDTH] = '\0';
                         printf("%-*s", COL_WIDTH, buf);
                         break;
 
@@ -310,16 +303,16 @@ void mostra_lavagna() {
 }
 
 void init_lavagna() {
-    create_card(1, TO_DO, "Implementare integrazione per il pagamento", 0);
-    create_card(2, TO_DO, "Implementare sito web servzio", 0);
-    create_card(3, TO_DO, "Diagramma delle classi UML", 0);
-    create_card(4, TO_DO, "Studio dei requisiti dell'applicazione", 0);
-    create_card(5, TO_DO, "Realizzare CRC card", 0);
-    create_card(6, TO_DO, "Studio dei casi d'uso", 0);
-    create_card(7, TO_DO, "Realizzazione dei flow of events", 0);
-    create_card(8, TO_DO, "Diagramma di deployment", 0);
-    create_card(9, TO_DO, "Analisi delle classi", 0);
-    create_card(10, TO_DO, "Implementare testing del software", 0);
+    create_card(1, TO_DO, "Implementare integrazione per il pagamento");
+    create_card(2, TO_DO, "Implementare sito web servzio");
+    create_card(3, TO_DO, "Diagramma delle classi UML");
+    create_card(4, TO_DO, "Studio dei requisiti dell'applicazione");
+    create_card(5, TO_DO, "Realizzare CRC card");
+    create_card(6, TO_DO, "Studio dei casi d'uso");
+    create_card(7, TO_DO, "Realizzazione dei flow of events");
+    create_card(8, TO_DO, "Diagramma di deployment");
+    create_card(9, TO_DO, "Analisi delle classi");
+    create_card(10, TO_DO, "Implementare testing del software");
 
     mostra_lavagna();
 }
