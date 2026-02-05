@@ -151,14 +151,11 @@ int quit(User* user) {
 
     if (ret >= 0) {
         // TODO: controllare che non abbia delle card in Doing
-        Card *user_cards = {0};
-        int n = get_user_cards(port, user_cards);
-        for (int i = 0; i < n; i++) {
-            if (user_cards[i].colonna == DOING) { 
-                user_cards[i].colonna = TO_DO; 
-                handle_cards();
-            }
+        if(user->card.colonna == DOING){
+            user->card.colonna = TO_DO; 
+            handle_cards();
         }
+        
 
     	printf("Deregistrato client %d\n", port);
         return 0;
@@ -169,10 +166,18 @@ int quit(User* user) {
 
 int ack_card(User* user){
 
-
+    user->card.colonna = DOING;
+    user->state = BUSY;
+    return 0;
 
 }
 
+int card_done(User* user){
+
+    user->card.colonna = DONE;
+    user->state = IDLE;
+    return 0;
+}
 
 // GESTISCE IL COMANDO IN ARRIVO DAL CLIENT!!!!!!
 void gestisci_comando(const Command *cmd, unsigned short port) {
