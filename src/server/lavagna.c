@@ -254,6 +254,14 @@ int card_done(User *user, int card_id) {
     return 0;
 }
 
+
+
+
+int pong_lavagna(){
+
+}
+
+
 // GESTISCE IL COMANDO IN ARRIVO DAL CLIENT!!!!!!
 void gestisci_comando(const Command *cmd, unsigned short port) {
     // mostra_lavagna();
