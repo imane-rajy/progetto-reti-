@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/select.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #define MAX_CLIENTS 30
 #define BUFFER_SIZE 1024
@@ -21,87 +22,94 @@ typedef struct {
 Client clients[MAX_CLIENTS] = {0};
 int num_client = 0;
 
+pthread_mutex_t server_sock_m;
+pthread_mutex_t server_user_m;
+
 void inserisci_client(int sock, unsigned short port) {
+    pthread_mutex_lock(&server_sock_m);
     for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (clients[i].socket != 0) continue;
-
-        clients[i].socket = sock;
-        clients[i].port = port;
-        return;
+        if (clients[i].socket == 0){
+            clients[i].socket = sock;
+            clients[i].port = port;
+            break;
+        }
     }
-
+    pthread_mutex_unlock(&server_sock_m);
     // errore: spazio esaurito
 }
 
 void rimuovi_client(int sock) {
+    pthread_mutex_lock(&server_sock_m);
     for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (clients[i].socket != sock) continue;
-
-        clients[i].socket = 0;
+        if (clients[i].socket == sock) {
+            clients[i].socket = 0;
+            clients[i].port = 0;
+            break;
+        }
     }
+
+    pthread_mutex_unlock(&server_sock_m);
 }
 
 unsigned short get_port(int sock) {
-    for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (clients[i].socket != sock) continue;
+    pthread_mutex_lock(&server_sock_m);
 
-        return clients[i].port;
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i].socket == sock) {
+            unsigned short port = clients[i].port;
+            pthread_mutex_unlock(&server_sock_m);
+            return port;
+        }
     }
 
+    pthread_mutex_unlock(&server_sock_m);
     return 0;
 }
 
 int get_socket(unsigned short port) {
-    for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (clients[i].port != port) continue;
+    pthread_mutex_lock(&server_sock_m);
 
-        return clients[i].socket;
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i].port == port) {
+            int sock = clients[i].socket;
+            pthread_mutex_unlock(&server_sock_m);
+            return sock;
+        }
     }
 
+    pthread_mutex_unlock(&server_sock_m);
     return 0;
 }
 
-void send_client(const Command *cm, unsigned short port) {
+int send_client(const Command *cm, unsigned short port) {
+    
     int sock = get_socket(port);
     if (sock == 0) return;
 
-    send_command(cm, sock, NULL);
+    int ret = send_command(cm, sock, &server_sock_m);
+
+    return ret;
 }
 
-int main() {
-    // crea socket ascolto
-    int listen_sock;
-    if ((listen_sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("Errore nella creazione del socket di ascolto");
-        return -1;
+
+
+void * ping_thread(void *arg){
+
+
+    while(1){
+
+        sleep(1);
+        
+        gestici_ping(&server_user_m);
     }
+}
 
-    // rendi il socket di ascolto riutilizzabile (per debugging più veloce)
-    int yes = 1;
-    setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
-    // configura indirizzo server
-    struct sockaddr_in serv_addr;
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(SERVER_PORT);
 
-    // collega ad indirizzo server
-    if (bind(listen_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        perror("Errore nella bind");
-        return -1;
-    }
+void *select_thread(void *arg){
+    
+    int listen_sock = *(int *)arg;
 
-    // metti il socket di ascolto, in ascolto
-    if (listen(listen_sock, 10) < 0) {
-        perror("Errore nella listen");
-        return -1;
-    }
-
-    printf("Server TCP in ascolto sulla porta %d...\n", SERVER_PORT);
-
-    // inizializza lavagna
-    init_lavagna();
 
     // inizializza multiplexing
     fd_set master_set, read_set;
@@ -185,5 +193,63 @@ int main() {
         }
     }
 
+
+}
+
+
+
+
+
+int main() {
+    // crea socket ascolto
+    int listen_sock;
+    if ((listen_sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("Errore nella creazione del socket di ascolto");
+        return -1;
+    }
+
+    // rendi il socket di ascolto riutilizzabile (per debugging più veloce)
+    int yes = 1;
+    setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+
+    // inizializza mutex
+    pthread_mutex_init(&server_sock_m, NULL);
+    pthread_mutex_init(&server_user_m, NULL);
+    // configura indirizzo server
+    struct sockaddr_in serv_addr;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(SERVER_PORT);
+
+    // collega ad indirizzo server
+    if (bind(listen_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        perror("Errore nella bind");
+        return -1;
+    }
+
+    // metti il socket di ascolto, in ascolto
+    if (listen(listen_sock, 10) < 0) {
+        perror("Errore nella listen");
+        return -1;
+    }
+
+    printf("Server TCP in ascolto sulla porta %d...\n", SERVER_PORT);
+
+    // inizializza lavagna
+    init_lavagna();
+
+    pthread_t t_select, t_ping;
+
+    // thread che gestisce i client con la select 
+    pthread_create(&t_select, NULL, select_thread, &listen_sock);
+
+    //thread che gestisci i ping
+    pthread_create(&t_ping, NULL, ping_thread, NULL);
+
+    pthread_join(t_select, NULL);
+    pthread_join(t_ping, NULL);
+
+
+ 
     return 0;
 }
