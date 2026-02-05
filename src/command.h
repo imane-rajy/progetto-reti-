@@ -2,6 +2,7 @@
 #define COMMAND_H
 
 #include <pthread.h>
+#include <arpa/inet.h>
 
 typedef enum {
     // client -> server
@@ -49,5 +50,8 @@ void buf_to_cmd(char *buf, Command *cm);
 
 int send_command(const Command *cm, int sock, pthread_mutex_t *m);
 int recv_command(Command *cm, int sock, pthread_mutex_t *m);
+
+int sendto_command(const Command* cm, int sock, const struct sockaddr_in * addr);
+int recvfrom_command(Command *cm, int sock, unsigned short* port);
 
 #endif

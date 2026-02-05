@@ -25,7 +25,7 @@ typedef struct {
     unsigned short port;
     UserState state;
     int card_id;
-
+	
 } User;
 
 extern Card cards[MAX_CARDS];
