@@ -1,7 +1,8 @@
 #ifndef LAVAGNA_H
 #define LAVAGNA_H
 
-#include "../includes.h"
+#include "../command.h"
+#include "../card.h"
 #include <time.h>
 
 #define MAX_CARDS 100
