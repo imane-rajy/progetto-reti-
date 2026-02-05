@@ -4,8 +4,8 @@ CC = gcc
 CFLAGS = -Wall -Wextra -I./src -g
 SRC_DIR = src
 
-CLIENT_SRC = $(SRC_DIR)/client/client.c $(SRC_DIR)/includes.c
-SERVER_SRC = $(SRC_DIR)/server/server.c $(SRC_DIR)/server/lavagna.c $(SRC_DIR)/includes.c
+CLIENT_SRC = $(SRC_DIR)/client/client.c $(SRC_DIR)/command.c $(SRC_DIR)/card.c
+SERVER_SRC = $(SRC_DIR)/server/server.c $(SRC_DIR)/server/lavagna.c $(SRC_DIR)/command.c $(SRC_DIR)/card.c
 
 CLIENT_OUT = client
 SERVER_OUT = server

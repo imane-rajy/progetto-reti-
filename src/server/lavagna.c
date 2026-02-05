@@ -1,11 +1,9 @@
-#include "server.h"
 #include "lavagna.h"
+#include "server.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-
 
 User users[MAX_USERS] = {0}; // array per i client registrati
 int num_user = 0;
@@ -13,11 +11,10 @@ int num_user = 0;
 int inserisci_user(unsigned short client) {
 
     int idx = client - MIN_PORT_USERS;
-    if(users[idx].port != 0){
+    if (users[idx].port != 0) {
         num_user++;
         return i;
     }
-
 
     // errore: spazio esaurito
     return -1;
@@ -26,16 +23,15 @@ int inserisci_user(unsigned short client) {
 int controlla_user(unsigned short client) {
 
     int idx = client - MIN_PORT_USERS;
-    if(users[idx].port == client && users[idx].state == BUSY)
-        return idx;
-    
+    if (users[idx].port == client && users[idx].state == BUSY) return idx;
+
     // errore: user non presente
     return -1;
 }
 
 int rimuovi_user(unsigned short client) {
     int idx = controlla_user(client);
-    if(idx >= 0){
+    if (idx >= 0) {
         users[i].port = 0;
         num_user--;
         return 1;
@@ -63,87 +59,76 @@ int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
     return n; // ritorna quante card ci sono nel “sotto-array”
 }
 
+void handle_cards() {
 
-void handle_cards(){
-
-    
-    for(int i = 0; i < MAX_USERS; i++){
-        if(users[i].state == IDLE)
-            handle_card(users[i].port);
+    for (int i = 0; i < MAX_USERS; i++) {
+        if (users[i].state == IDLE) handle_card(users[i].port);
     }
-
 }
 void handle_card(unsigned short client) {
-	for(int i = 0; i < MAX_CARDS; i++) {
-		if(cards[i].colonna != TO_DO) continue;
+    for (int i = 0; i < MAX_CARDS; i++) {
+        if (cards[i].colonna != TO_DO) continue;
 
-		Card* card = &cards[i];
-		card->client = client;
+        Card *card = &cards[i];
+        card->client = client;
         int idx = MIN_PORT_USERS - client;
         users[idx].state = ASSIGNED_CARD;
-		// TODO: aggiornare timestamp
-        
-		Command cmd = { .type = HANDLE_CARD };
-		card_to_cmd(card, &cmd);
-		send_client(&cmd, client);
-   		
-		printf("Assegnata card %d a client %d\n", card->id, client);	
-		return;
-	}
+        // TODO: aggiornare timestamp
+
+        Command cmd = {.type = HANDLE_CARD};
+        card_to_cmd(card, &cmd);
+        send_client(&cmd, client);
+
+        printf("Assegnata card %d a client %d\n", card->id, client);
+        return;
+    }
 }
 
 int request_user_list(User *user) {
-    
-  // prepara buffer per id client
-  char client_ports[num_users][6]; // 5 caratteri + terminatore per 65535
 
-  // prepara risposta
-  cmd cm = {
+    // prepara buffer per id client
+    char client_ports[num_users][6]; // 5 caratteri + terminatore per 65535
+
+    // prepara risposta
+    cmd cm = {
         .type = SEND_USER_LIST
-      // verrà popolato in seguito
-  };
+        // verrà popolato in seguito
+    };
 
-  int n = 0;
-  // itera sui client
-  for (int i = 0; i < MAX_USERS; i++) {
-        if (user == &users[i]) {
-            continue;
+    int n = 0;
+    // itera sui client
+    for (int i = 0; i < MAX_USERS; i++) {
+        if (user == &users[i]) { continue; }
+
+        if (users[i].port != 0) {
+            // copia id client nel buffer
+            snprintf(client_ports[n], 6, "%d", users[i].port);
+
+            // usa come argomento
+            cm.args[n] = client_ports[n];
+            n++;
         }
-
-    if (users[i].port != 0){
-      // copia id client nel buffer
-      snprintf(client_ports[n], 6, "%d", users[i].port);
-
-      // usa come argomento
-      cm.args[n] = client_ports[n];
-      n++;
     }
-  }
 
-  // metti commento nell'ultimo argomento
-  cm.args[n++] = "fornita lista utenti registrati";
+    // metti commento nell'ultimo argomento
+    cm.args[n++] = "fornita lista utenti registrati";
 
-  // invia risposta
-  send_client(cl->id, &cm);
+    // invia risposta
+    send_client(cl->id, &cm);
 
-  return 0;
+    return 0;
 }
-
 
 int create_card(int id, Colonna colonna, const char *testo, unsigned short client) {
     // verifica che l'id sia unico
     for (int i = 0; i < MAX_CARDS; i++) {
-        if (cards[i].id == id) {
-            return -1;
-        }
+        if (cards[i].id == id) { return -1; }
     }
 
     // alloca la card
     int idx = num_card;
     num_card++;
-    if (idx >= MAX_CARDS) {
-        return -2;
-    }
+    if (idx >= MAX_CARDS) { return -2; }
 
     // imposta i dati della card
     cards[idx].id = id;
@@ -162,7 +147,7 @@ int hello(unsigned short client) {
     // prova a registrate un utente
     int ret = inserisci_user(client);
 
-    if(ret >= 0){
+    if (ret >= 0) {
         printf("Registrato client %d\n", client);
         handle_card(client);
         return 0;
@@ -174,14 +159,12 @@ int hello(unsigned short client) {
 int quit(unsigned short client) {
     int ret = rimuovi_user(client);
 
-    if(ret >= 0 ){
+    if (ret >= 0) {
         // TODO: controllare che non abbia delle card in Doing
-        Card* user_cards = {0};
+        Card *user_cards = {0};
         int n = get_user_cards(client, user_cards);
-        for(int i=0; i < n; i++){
-            if(user_cards[i].colonna == DOING) {
-                user_cards[i].colonna = TO_DO;
-            }
+        for (int i = 0; i < n; i++) {
+            if (user_cards[i].colonna == DOING) { user_cards[i].colonna = TO_DO; }
         }
 
         printf("Deregistrato client %d\n", client);
@@ -189,11 +172,7 @@ int quit(unsigned short client) {
     }
 
     return -1;
-
 }
-
-
-
 
 void gestisci_comando(const Command *cmd, unsigned short port) {
     mostra_lavagna();
@@ -263,8 +242,7 @@ void mostra_lavagna() {
     int col_counts[NUM_COLS] = {0};
     for (int i = 0; i < num_card; i++) {
         col_counts[cards[i].colonna]++;
-        if (col_counts[cards[i].colonna] > max_rows)
-            max_rows = col_counts[cards[i].colonna];
+        if (col_counts[cards[i].colonna] > max_rows) max_rows = col_counts[cards[i].colonna];
     }
 
     // realizza una tabella di puntatori a card organizzata per colonne
@@ -294,7 +272,9 @@ void mostra_lavagna() {
 
                     // colonna 1: altri dati
                     case 1:
-                        snprintf(buf, sizeof(buf), "ID:%d Client:%d %02d-%02d-%04d %02d:%02d:%02d", card->id, card->client, card->timestamp.tm_mday, card->timestamp.tm_mon + 1, card->timestamp.tm_year + 1900, card->timestamp.tm_hour, card->timestamp.tm_min, card->timestamp.tm_sec);
+                        snprintf(buf, sizeof(buf), "ID:%d Client:%d %02d-%02d-%04d %02d:%02d:%02d", card->id, card->client,
+                                 card->timestamp.tm_mday, card->timestamp.tm_mon + 1, card->timestamp.tm_year + 1900,
+                                 card->timestamp.tm_hour, card->timestamp.tm_min, card->timestamp.tm_sec);
 
                         buf[COL_WIDTH] = '\0';
                         printf("%-*s", COL_WIDTH, buf);
