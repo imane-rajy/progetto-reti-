@@ -45,17 +45,17 @@ int rimuovi_user(unsigned short client) {
 Card cards[MAX_CARDS] = {0};
 int num_cards = 0;
 
-int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
-    int n = 0;
-
-    for (int i = 0; i < num_cards && n < MAX_CARDS; i++) {
-        if (cards[i].client == client) {
-            user_cards[n++] = cards[i]; // copio solo le card dell’utente
-        }
-    }
-
-    return n; // ritorna quante card ci sono nel “sotto-array”
-}
+//int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
+//    int n = 0;
+//
+//    for (int i = 0; i < num_cards && n < MAX_CARDS; i++) {
+//        if (cards[i].client == client) {
+//            user_cards[n++] = cards[i]; // copio solo le card dell’utente
+//        }
+//    }
+//
+//    return n; // ritorna quante card ci sono nel “sotto-array”
+//}
 
 void handle_card(unsigned short client) {
     for (int i = 0; i < MAX_CARDS; i++) {
@@ -178,6 +178,14 @@ int quit(unsigned short client) {
     return -1;
 }
 
+int ack_card(User* user){
+
+
+
+}
+
+
+// GESTISCE IL COMANDO IN ARRIVO DAL CLIENT!!!!!!
 void gestisci_comando(const Command *cmd, unsigned short port) {
     mostra_lavagna();
 
@@ -213,7 +221,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         break;
     }
     case ACK_CARD: {
-        // ack_card();
+        ret = ack_card(port);
         break;
     }
     case REQUEST_USER_LIST: {
