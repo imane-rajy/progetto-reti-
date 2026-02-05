@@ -126,7 +126,7 @@ int request_user_list(unsigned short clients[MAX_CLIENTS], int *num_clients) {
 int get_review(unsigned short client) {
     // TODO: implementa
     printf("Richiedo la review dell'utente %d...\n", client);
-    return 10; // per adesso dai sempre una valutazione positiva
+    return 1; // per adesso dai sempre una valutazione positiva
 }
 
 void do_card() {

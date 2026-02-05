@@ -144,15 +144,32 @@ int hello(unsigned short client) {
     return -1;
 }
 
+
+int find_card(int card_id){
+
+    for(int i = 0; i< MAX_CARDS; i++){
+        if(cards[i].id == card_id )
+            return i
+    }
+    return -1;
+}
+
+
 int quit(User *user) {
+
     int port = user->port;
 
     int ret = rimuovi_user(user);
 
     if (ret >= 0) {
         // TODO: controllare che non abbia delle card in Doing
-        if(user->card->colonna == DOING){
-            user->card->colonna = TO_DO; 
+        int idx = find_card(user->card);
+        if(idx < 0){
+            return -1;
+        }
+        Card* card = &cards[idx];
+        if(card->colonna == DOING){
+            move_card(card->id, TODO);
             handle_cards();
         }
 
@@ -163,14 +180,56 @@ int quit(User *user) {
     return -1;
 }
 
-int ack_card(User *user) {
 
+
+int move_card(int card_id, Colonna to){
+
+    int idx = find_card(card_id);
+
+    if(idx < 0){
+        return -1;
+    }
+
+    if(cards[idx].colonna == to){
+        return ;
+    }
+    
+    card[idx].colonna = to;
+    return 0;
+
+}
+
+int ack_card(User *user, int card_id) {
+
+    if(user->state != ASSIGNED_CARD)
+        return -1;
+
+    if(user->card->id != card_id){
+        return -1;
+    }
+
+    if(user->card->colonna != TODO){
+        return -1;
+    }
     user->card->colonna = DOING;
     user->state = BUSY;
     return 0;
 }
 
-int card_done(User *user) {
+int card_done(User *user, int card_id) {
+
+    if(user->state != BUSY){
+        return -1;
+    }
+    
+    if(user->card->id != card_id){
+        return -1;
+    }
+
+    if(user->card->colonna != DOING){
+        return -1;
+    }
+
 
     user->card->colonna = DONE;
     user->state = IDLE;
@@ -221,7 +280,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         break;
     }
     case CARD_DONE: {
-        // card_done();
+        ret = card_done();
         break;
     }
     default:

@@ -11,6 +11,8 @@
 
 #define MIN_PORT_USERS 5679
 
+#define MIN_NUM_USER_DONE 2
+
 typedef enum {
 
     BUSY,
@@ -22,7 +24,7 @@ typedef enum {
 typedef struct {
     unsigned short port;
     UserState state;
-    Card *card;
+    int card_id;
 
 } User;
 
