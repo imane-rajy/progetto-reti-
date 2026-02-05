@@ -28,8 +28,7 @@ User* controlla_user(unsigned short client) {
     return NULL;
 }
 
-int rimuovi_user(unsigned short client) {
-    User* user = controlla_user(client);
+int rimuovi_user(User* user) {
     if (user != NULL) {
         user->port = 0;
         num_users--;
@@ -45,6 +44,7 @@ int rimuovi_user(unsigned short client) {
 Card cards[MAX_CARDS] = {0};
 int num_cards = 0;
 
+<<<<<<< HEAD
 //int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
 //    int n = 0;
 //
@@ -56,6 +56,19 @@ int num_cards = 0;
 //
 //    return n; // ritorna quante card ci sono nel “sotto-array”
 //}
+=======
+int get_user_cards(unsigned short port, Card user_cards[MAX_CARDS]) {
+    int n = 0;
+
+    for (int i = 0; i < num_cards && n < MAX_CARDS; i++) {
+        if (cards[i].client == port) {
+            user_cards[n++] = cards[i]; // copio solo le card dell’utente
+        }
+    }
+
+    return n; // ritorna quante card ci sono nel “sotto-array”
+}
+>>>>>>> f1dcf491bd6a8f096f5b58e6b416c8ff3206ad52
 
 void handle_card(unsigned short client) {
     for (int i = 0; i < MAX_CARDS; i++) {
@@ -65,7 +78,7 @@ void handle_card(unsigned short client) {
         card->client = client;
         int idx = MIN_PORT_USERS - client;
         users[idx].state = ASSIGNED_CARD;
-        // TODO: aggiornare timestamp
+		timestamp_card(card);
 
         Command cmd = {.type = HANDLE_CARD};
         card_to_cmd(card, &cmd);
@@ -157,13 +170,15 @@ int hello(unsigned short client) {
     return -1;
 }
 
-int quit(unsigned short client) {
-    int ret = rimuovi_user(client);
+int quit(User* user) {
+	int port = user->port;
+	
+	int ret = rimuovi_user(user);
 
     if (ret >= 0) {
         // TODO: controllare che non abbia delle card in Doing
         Card *user_cards = {0};
-        int n = get_user_cards(client, user_cards);
+        int n = get_user_cards(port, user_cards);
         for (int i = 0; i < n; i++) {
             if (user_cards[i].colonna == DOING) { 
                 user_cards[i].colonna = TO_DO; 
@@ -171,7 +186,7 @@ int quit(unsigned short client) {
             }
         }
 
-        printf("Deregistrato client %d\n", client);
+    	printf("Deregistrato client %d\n", port);
         return 0;
     }
 
@@ -213,7 +228,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         break;
     }
     case QUIT: {
-        ret = quit(port);
+        ret = quit(user);
         break;
     }
     case PONG_LAVAGNA: {
