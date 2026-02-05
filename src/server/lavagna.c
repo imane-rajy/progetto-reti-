@@ -245,6 +245,9 @@ int card_done(User *user, int card_id) {
     return 0;
 }
 
+int pong_lavagna() {
+}
+
 void gestisci_comando(const Command *cmd, unsigned short port) {
     // mostra_lavagna();
 
@@ -262,27 +265,27 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
     case CREATE_CARD: {
         int id = atoi(cmd->args[0]);
         Colonna colonna = str_to_col(cmd->args[1]);
-        
-		// copia tutti gli ultimi argomenti nel testo
-		char testo[MAX_TESTO];	
-		char *pun = testo;
-		int argc = get_argc(cmd);
 
-		for (int i = 2; i < argc; i++) {
-			const char *arg = cmd->args[i];
-			size_t len = strlen(arg);
+        // copia tutti gli ultimi argomenti nel testo
+        char testo[MAX_TESTO];
+        char *pun = testo;
+        int argc = get_argc(cmd);
 
-			// nel caso di overflow esci
-			if ((pun - testo) + len >= MAX_TESTO - 1) break;
+        for (int i = 2; i < argc; i++) {
+            const char *arg = cmd->args[i];
+            size_t len = strlen(arg);
 
-			strcpy(pun, arg);
-			pun += len;
+            // nel caso di overflow esci
+            if ((pun - testo) + len >= MAX_TESTO - 1) break;
 
-			if (i != argc - 1 && (pun - testo) < MAX_TESTO - 1) { *pun++ = ' '; }
-		}
+            strcpy(pun, arg);
+            pun += len;
 
-		// termina
-		*pun = '\0';
+            if (i != argc - 1 && (pun - testo) < MAX_TESTO - 1) { *pun++ = ' '; }
+        }
+
+        // termina
+        *pun = '\0';
 
         ret = create_card(id, colonna, testo);
         break;

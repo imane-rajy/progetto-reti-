@@ -106,43 +106,41 @@ int send_command(const Command *cm, int sock, pthread_mutex_t *m) {
 }
 
 int recv_command(Command *cm, int sock, pthread_mutex_t *m) {
-	// inizializza buffer di ricezione
+    // inizializza buffer di ricezione
     static char recvbuf[1024];
-    static int start = 0; // inizio di dati validi nel buffer 
-    static int end = 0;   // fine di dati validi nel buffer 
+    static int start = 0; // inizio di dati validi nel buffer
+    static int end = 0;   // fine di dati validi nel buffer
 
     if (m) pthread_mutex_lock(m); // blocca socket
 
     int ret = 0;
 
     while (1) {
-		// cerca un delimitatore nel range valido
+        // cerca un delimitatore nel range valido
         for (int i = start; i < end; i++) {
             if (recvbuf[i] == '\n') {
-				// trovata una linea, crea un comando
+                // trovata una linea, crea un comando
                 recvbuf[i] = '\0';
                 buf_to_cmd(recvbuf + start, cm);
 
-				// porta start dopo la fine della linea trovata
+                // porta start dopo la fine della linea trovata
                 start = i + 1;
 
-				// se è vuoto, riparti dall'origine
-                if (start == end) {
-                    start = end = 0;
-                }
+                // se è vuoto, riparti dall'origine
+                if (start == end) { start = end = 0; }
 
-				// sblocca e restituisci il comando
+                // sblocca e restituisci il comando
                 if (m) pthread_mutex_unlock(m);
                 return 1;
             }
         }
 
-		// gestisci l'overlow svuotando il buffer
+        // gestisci l'overlow svuotando il buffer
         if (end == sizeof(recvbuf)) { start = end = 0; }
 
-		// leggi altri dati se non c'è ancora un delimitatore 
+        // leggi altri dati se non c'è ancora un delimitatore
         ret = recv(sock, recvbuf + end, sizeof(recvbuf) - end, 0);
-        if (ret <= 0) break; 
+        if (ret <= 0) break;
 
         end += ret;
     }

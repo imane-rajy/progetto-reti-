@@ -24,10 +24,35 @@ pthread_mutex_t client_sock_m;
 volatile int registered = 0;
 volatile int running = 1;
 
+int pong_lavagna() {
+    // prepara pong
+    Command pong = {.type = PONG_LAVAGNA};
+
+    // invia pong
+    int ret = send_command(&pong, client_sock, &client_sock_m);
+    if (ret < 0) return ret;
+
+    printf("Inviato pong\n");
+    return 0;
+}
+
+int switch_recv(Command *cm) {
+    while (1) {
+        // ricevi un comando
+        int ret = recv_command(cm, client_sock, &client_sock_m);
+
+        // se c'è un errore o non è ping, restituisci
+        if (ret < 0 || cm->type != PING_USER) return ret;
+
+        // altrimenti rispondi
+        if (pong_lavagna() < 0) return -1;
+    }
+}
+
 int get_user_list(unsigned short clients[MAX_CLIENTS], int *num_clients) {
     // ottieni lista
     Command cmd = {0};
-    if (recv_command(&cmd, client_sock, &client_sock_m) < 0) {
+    if (switch_recv(&cmd) < 0) {
         perror("Errore nella ricezione card");
         return -1;
     }
@@ -59,7 +84,7 @@ int get_user_list(unsigned short clients[MAX_CLIENTS], int *num_clients) {
 int get_card(unsigned short clients[MAX_CLIENTS], int *num_clients) {
     // ottieni card
     Command cmd = {0};
-    if (recv_command(&cmd, client_sock, &client_sock_m) < 0) {
+    if (switch_recv(&cmd) < 0) {
         perror("Errore nella ricezione card");
         return -1;
     }

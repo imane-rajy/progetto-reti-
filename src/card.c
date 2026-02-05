@@ -79,7 +79,7 @@ int cmd_to_card(const Command *cm, Card *c) {
         const char *arg = cm->args[i];
         size_t len = strlen(arg);
 
-		// nel caso di overflow esci
+        // nel caso di overflow esci
         if ((pun - c->testo) + len >= MAX_TESTO - 1) break;
 
         strcpy(pun, arg);
@@ -88,7 +88,7 @@ int cmd_to_card(const Command *cm, Card *c) {
         if (i != argc - 1 && (pun - c->testo) < MAX_TESTO - 1) { *pun++ = ' '; }
     }
 
-	// termina
+    // termina
     *pun = '\0';
 
     return 0;
