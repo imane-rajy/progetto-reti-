@@ -44,32 +44,6 @@ int rimuovi_user(User* user) {
 Card cards[MAX_CARDS] = {0};
 int num_cards = 0;
 
-<<<<<<< HEAD
-//int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
-//    int n = 0;
-//
-//    for (int i = 0; i < num_cards && n < MAX_CARDS; i++) {
-//        if (cards[i].client == client) {
-//            user_cards[n++] = cards[i]; // copio solo le card dell’utente
-//        }
-//    }
-//
-//    return n; // ritorna quante card ci sono nel “sotto-array”
-//}
-=======
-int get_user_cards(unsigned short port, Card user_cards[MAX_CARDS]) {
-    int n = 0;
-
-    for (int i = 0; i < num_cards && n < MAX_CARDS; i++) {
-        if (cards[i].client == port) {
-            user_cards[n++] = cards[i]; // copio solo le card dell’utente
-        }
-    }
-
-    return n; // ritorna quante card ci sono nel “sotto-array”
-}
->>>>>>> f1dcf491bd6a8f096f5b58e6b416c8ff3206ad52
-
 void handle_card(unsigned short client) {
     for (int i = 0; i < MAX_CARDS; i++) {
         if (cards[i].colonna != TO_DO) continue;
