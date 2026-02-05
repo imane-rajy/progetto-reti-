@@ -8,10 +8,47 @@
 User users[MAX_USERS] = {0}; // array per gli utenti registrati
 int num_users = 0;
 
+
+int gestici_ping(pthread_mutex_t *server_user_m){
+
+    pthread_mutex_lock(server_user_m);
+    for(int i = 0; i < MAX_USERS; i++){
+
+        User* user = &users[i];
+        
+        if(user->port != 0){
+            
+            if(user->state == BUSY){
+                if(!--user->timer_ping){
+
+                    if(!user->ping_sent){
+                        Command cmd = { .type = PING_USER };
+                        send_client(&cm, user->port);
+                        user->ping_sent = 1;
+                        user->timer_ping = WAIT_FOR_PONG;
+                    }
+                    else{
+
+                        quit(user);
+
+                    }
+
+                }
+            }
+
+        }
+    }
+
+    pthread_mutex_unlock(server_user_m);
+}
+
+
 int inserisci_user(unsigned short client) {
     int idx = client - MIN_PORT_USERS;
     if (users[idx].port == 0) {
         users[idx].port = client;
+        users[idx].timer_ping = WAIT_TO_PING;
+        users[idx].ping_sent = 0;
         num_users++;
         return idx;
     }
@@ -245,7 +282,11 @@ int card_done(User *user, int card_id) {
     return 0;
 }
 
-int pong_lavagna() {
+int pong_lavagna(User* user) {
+
+    user->ping_sent = 0;
+    user->timer_ping = WAIT_TO_PING;
+
 }
 
 void gestisci_comando(const Command *cmd, unsigned short port) {
@@ -299,7 +340,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
         break;
     }
     case PONG_LAVAGNA: {
-        // pong_lavagna();
+        pong_lavagna(user);
         break;
     }
     case ACK_CARD: {
