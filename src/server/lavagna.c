@@ -70,6 +70,21 @@ const char *col_to_str(Colonna id) { return col_names[id]; }
 Card cards[MAX_CARDS] = {0};
 int num_card = 0;
 
+int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
+
+    int n = 0;
+
+    for (int i = 0; i < num_card && n < MAX_CARDS; i++) {
+        if (cards[i].client == client) {
+            user_cards[n++] = cards[i]; // copio solo le card dell’utente
+        }
+    }
+
+    return n; // ritorna quante card ci sono nel “sotto-array”
+}
+
+
+
 void handle_card(unsigned short client) {
 	for(int i = 0; i < MAX_CARDS; i++) {
 		if(cards[i].colonna != TO_DO) continue;

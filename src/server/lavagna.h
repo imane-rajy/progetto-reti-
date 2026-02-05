@@ -11,6 +11,8 @@ extern int num_card;
 
 void init_lavagna();
 void mostra_lavagna();
+
+int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]);
 void gestisci_comando(const Command *cmd, unsigned short port);
 
 #endif

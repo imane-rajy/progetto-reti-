@@ -206,15 +206,3 @@ int recv_command(Command *cm, int sock, pthread_mutex_t *m) {
 
 
 
-int get_user_cards(unsigned short client, Card user_cards[MAX_CARDS]) {
-
-    int n = 0;
-
-    for (int i = 0; i < num_card && n < MAX_CARDS; i++) {
-        if (cards[i].client == client) {
-            user_cards[n++] = cards[i]; // copio solo le card dell’utente
-        }
-    }
-
-    return n; // ritorna quante card ci sono nel “sotto-array”
-}
