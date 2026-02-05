@@ -163,8 +163,8 @@ int quit(User* user) {
 
     if (ret >= 0) {
         // TODO: controllare che non abbia delle card in Doing
-        if(user->card.colonna == DOING){
-            user->card.colonna = TO_DO; 
+        if(user->card->colonna == DOING){
+            user->card->colonna = TO_DO; 
             handle_cards();
         }
         
@@ -178,7 +178,7 @@ int quit(User* user) {
 
 int ack_card(User* user){
 
-    user->card.colonna = DOING;
+    user->card->colonna = DOING;
     user->state = BUSY;
     return 0;
 
@@ -186,7 +186,7 @@ int ack_card(User* user){
 
 int card_done(User* user){
 
-    user->card.colonna = DONE;
+    user->card->colonna = DONE;
     user->state = IDLE;
     return 0;
 }
