@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <pthread.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/select.h>
 #include <unistd.h>
@@ -102,6 +103,7 @@ unsigned short get_port(int sock) {
     return 0;
 }
 
+// invia un comando ad un client identificato dalla sua porta
 int send_to_client(const Command *cmd, unsigned short port) {
     pthread_mutex_lock(&server_client_m); // blocca clients
 
@@ -264,19 +266,19 @@ int main() {
     serv_addr.sin_port = htons(SERVER_PORT);
 
     if (inet_pton(AF_INET, SERVER_ADDR, &serv_addr.sin_addr) <= 0) {
-        log_evento("Indirizzo server non valido\n");
+        printf("Indirizzo server non valido\n");
         return -1;
     }
 
     // collega ad indirizzo server
     if (bind(listen_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        log_evento("Errore nella bind %s\n", strerror(errno));
+        perror("Errore nella bind");
         return -1;
     }
 
     // metti il socket di ascolto, in ascolto
     if (listen(listen_sock, 10) < 0) {
-        log_evento("Errore nella listen %s\n", strerror(errno));
+        perror("Errore nella listen");
         return -1;
     }
 

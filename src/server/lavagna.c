@@ -23,6 +23,9 @@
 // tempo da aspettare prima di deregestrare un utente che non ha fatto PONG
 #define WAIT_FOR_PONG 10
 
+// stringa che contiene l'errore verificato
+const char *errore;
+
 // gestione degli utenti
 
 // rappresenta lo stato di un utente
@@ -50,6 +53,7 @@ int num_users = 0;
 int inserisci_user(unsigned short port) {
     // controlla che la porta sia nel range ammissibile
     if (port < MIN_PORT_USERS || port >= MIN_PORT_USERS + MAX_USERS) {
+        errore = "porta richiesta fuori dal range ammissibile";
         return -1;
     }
 
@@ -58,6 +62,7 @@ int inserisci_user(unsigned short port) {
 
     // controlla che sia vuoto
     if (users[idx].port != 0) {
+        errore = "utente da registrare già registrato";
         return -2;
     }
 
@@ -78,10 +83,11 @@ User *controlla_user(unsigned short port) {
 
     // verifica che la porta corrisponda
     User *user = &users[idx];
-    if (user->port == port)
+    if (user->port == port) {
         return user;
+    }
 
-    // errore: user non presente
+    errore = "utente richiesto non registrato";
     return NULL;
 }
 
@@ -91,10 +97,10 @@ int rimuovi_user(User *user) {
     if (user != NULL) {
         user->port = 0;
         num_users--;
-        return 1;
+        return 0;
     }
 
-    // errore: user non presente
+    errore = "utente da deregistrare non registrato";
     return -1;
 }
 
@@ -105,6 +111,40 @@ Card cards[MAX_CARDS] = {0};
 
 // numero di card presenti nel sistema
 int num_cards = 0;
+
+// trova l'indice di una card a partire dal suo id
+int find_card(int card_id) {
+    // scansiona le card
+    for (int i = 0; i < MAX_CARDS; i++) {
+        // restituisci l'indice dato l'id
+        if (cards[i].id == card_id) {
+            return i;
+        }
+    }
+
+    errore = "card con indice richiesto inesistente";
+    return -1;
+}
+
+// sposta una card, dato l'id, ad una certa colonna
+int move_card(int card_id, Colonna to) {
+    // trova l'indice della card
+    int idx = find_card(card_id);
+    if (idx < 0) {
+        return -1;
+    }
+
+    // assicurati che non sia già li
+    if (cards[idx].colonna == to) {
+        errore = "card giù situata nella colonna richiesta";
+        return -2;
+    }
+
+    // sposta la card
+    cards[idx].colonna = to;
+
+    return 0;
+}
 
 // handler dei comandi
 
@@ -163,7 +203,7 @@ void handle_card(User *user) {
         }
 
         // solo non è già assegnata
-        if (cards[i].client != 0) {
+        if (cards[i].port != 0) {
             continue;
         }
 
@@ -171,7 +211,7 @@ void handle_card(User *user) {
         Card *card = &cards[i];
 
         // assegnala al client
-        card->client = user->port;
+        card->port = user->port;
         user->card_id = card->id;
         user->state = ASSIGNED_CARD;
         timestamp_card(card);
@@ -208,6 +248,7 @@ int create_card(int id, Colonna colonna, const char *testo) {
     // controlla che l'id sia unico
     for (int i = 0; i < MAX_CARDS; i++) {
         if (cards[i].id == id) {
+            errore = "id della card da creare già usato";
             return -1;
         }
     }
@@ -218,12 +259,14 @@ int create_card(int id, Colonna colonna, const char *testo) {
 
     // controlla che lo spazio non sia stato esaurito
     if (idx >= MAX_CARDS) {
+        errore = "spazio esaurito per le card";
         return -2;
     }
 
     // imposta i dati della card
     cards[idx].id = id;
     cards[idx].colonna = colonna;
+    timestamp_card(&cards[idx]);
 
     // copia il testo nella card
     strncpy(cards[idx].testo, testo, MAX_TESTO - 1);
@@ -236,45 +279,18 @@ int create_card(int id, Colonna colonna, const char *testo) {
     return idx;
 }
 
-int hello(unsigned short client) {
-    // prova a registrate un utente
-    int idx = inserisci_user(client);
+// registra un utente a partire dal suo numero di porta
+int hello(unsigned short port) {
+    // prova a registrare un utente
+    int idx = inserisci_user(port);
 
     if (idx >= 0) {
-        log_evento("Registrato client %d\n", client);
+        log_evento("Registrato utente %d\n", port);
         handle_card(&users[idx]);
         return 0;
     }
 
     return -1;
-}
-
-int find_card(int card_id) {
-    // scansiona le card
-    for (int i = 0; i < MAX_CARDS; i++) {
-        // restituisci l'indice dato l'id
-        if (cards[i].id == card_id)
-            return i;
-    }
-
-    return -1;
-}
-
-int move_card(int card_id, Colonna to) {
-    // trova l'indice della card
-    int idx = find_card(card_id);
-    if (idx < 0) {
-        return -1;
-    }
-
-    // assicurati che non sia già li
-    if (cards[idx].colonna == to) {
-        return -2;
-    }
-
-    // sposta
-    cards[idx].colonna = to;
-    return 0;
 }
 
 int quit(User *user) {
@@ -291,16 +307,17 @@ int quit(User *user) {
         if (idx < 0) {
             return -1;
         }
-
         Card *card = &cards[idx];
 
         // annulla il suo utente
-        card->client = 0;
+        card->port = 0;
 
-        // mettila in TO_DO
+        // se era in DOING rimettila in TO_DO
         if (card->colonna == DOING) {
-            move_card(card->id, TO_DO);
-            handle_cards(); // fai il push della card
+            card->colonna = TO_DO;
+
+            // fai il push della card
+            handle_cards();
         }
 
         log_evento("Deregistrato client %d\n", port);
@@ -310,22 +327,30 @@ int quit(User *user) {
     return -1;
 }
 
+// gestisce l'ACK_CARD su una card
 int ack_card(User *user, int card_id) {
     // controlla che sia stata assegnata una card
-    if (user->state != ASSIGNED_CARD)
+    if (user->state != ASSIGNED_CARD) {
+        errore = "l'utente che ha fatto ACK_CARD non ha ricevuto nessuna card";
         return -1;
+    }
 
     // ottieni la card
     int idx = find_card(user->card_id);
+    if (idx < 0) {
+        return -2;
+    }
 
     // controlla che l'id corrisponda
     if (cards[idx].id != card_id) {
-        return -1;
+        errore = "l'utente ha fatto ACK_CARD su una card non posseduta";
+        return -3;
     }
 
     // controlla che la card siain TO_DO
     if (cards[idx].colonna != TO_DO) {
-        return -1;
+        errore = "ACK_CARD su una card non in TO_DO";
+        return -4;
     }
 
     // aggiorna lo stato della card e dell'utente
@@ -336,33 +361,41 @@ int ack_card(User *user, int card_id) {
     return 0;
 }
 
+// gestisce il CARD_DONE su una card
 int card_done(User *user, int card_id) {
     // controlla che ci sia il numero minimo di utenti registrati
     if (num_users < MIN_NUM_USERS_DONE) {
+        errore = "non ci sono abbastanza utenti per fare CARD_DONE";
         return -1;
     }
 
     // controlla che stia gestendo una card
     if (user->state != BUSY) {
+        errore = "l'utente che ha fatto CARD_DONE non aveva una card in DOING";
         return -2;
     }
 
     // ottieni la card
     int idx = find_card(user->card_id);
+    if (idx < 0) {
+        return -3;
+    }
 
     // controlla che l'id corrisponda
     if (cards[idx].id != card_id) {
-        return -3;
+        errore = "l'utente ha fatto CARD_DONE su una card non posseduta";
+        return -4;
     }
 
     // controlla che la card sia in DOING
     if (cards[idx].colonna != DOING) {
-        return -4;
+        errore = "CARD_DONE su una card non in DOING";
+        return -5;
     }
 
     // aggiorna lo stato della card e dell'utente
-    cards[idx].colonna = DONE;
     user->state = IDLE;
+    cards[idx].colonna = DONE;
     timestamp_card(&cards[idx]);
 
     // invia un altra card
@@ -372,8 +405,9 @@ int card_done(User *user, int card_id) {
     return 0;
 }
 
-// logica di gestione ping
+// logica di gestione PING
 
+// gestisce il PONG ricevuto da un utente
 int pong_lavagna(User *user) {
     user->ping_sent = 0;
     user->timer_ping = WAIT_TO_PING;
@@ -382,16 +416,16 @@ int pong_lavagna(User *user) {
     return 0;
 }
 
+// chiamata ogni secondo per gestire i PING
 int gestisci_ping(pthread_mutex_t *server_user_m) {
-    pthread_mutex_lock(server_user_m);
+    pthread_mutex_lock(server_user_m); // blocca users
 
+    // scansiona tutti gli utenti
     for (int i = 0; i < MAX_USERS; i++) {
-        // scansiona tutti gli utenti
         User *user = &users[i];
 
+        // solo se registrato e ha una card in DOING
         if (user->port != 0 && user->state == BUSY) {
-            // solo se registrato e ha una card in DOING
-
             if (!--user->timer_ping) {
                 // scatta il timer
                 if (!user->ping_sent) {
@@ -403,7 +437,7 @@ int gestisci_ping(pthread_mutex_t *server_user_m) {
 
                     log_evento("Inviato PING a utente\n");
                 } else {
-                    // ping già inviato, deregistra
+                    // PING già inviato, deregistra
                     quit(user);
 
                     log_evento("Utente non ha risposto a PING, lo deregistro\n");
@@ -412,32 +446,44 @@ int gestisci_ping(pthread_mutex_t *server_user_m) {
         }
     }
 
-    pthread_mutex_unlock(server_user_m);
+    pthread_mutex_unlock(server_user_m); // sblocca users
     return 0;
 }
 
+// id della lavagna corrente
+#define ID_LAVAGNA 0
+
+// larghezza di una colonna della lavagna (60 per evitare overflow)
 #define COL_WIDTH 60
 
+// stampa la lavagna a schermo, assieme alla lista degli ultimi eventi
 void stampa_lavagna() {
+    // ripulisci lo schermo
     system("clear");
 
-    // stampa header
+    // stampa header della lavagna
+    printf("ID Lavagna: %d, Utenti registrati: %d, Card create: %d\n", ID_LAVAGNA, num_users, num_cards);
+
+    // stampa header colonne
     for (int c = 0; c < NUM_COLS; c++) {
-        stampa_header(col_names[c], COL_WIDTH);
+        stampa_header(col_to_str(c), COL_WIDTH);
     }
     printf("\n");
 
     // ottieni il numero di righe
     int max_rows = 0;
+
     int col_counts[NUM_COLS] = {0};
     for (int i = 0; i < num_cards; i++) {
         col_counts[cards[i].colonna]++;
-        if (col_counts[cards[i].colonna] > max_rows)
+        if (col_counts[cards[i].colonna] > max_rows) {
             max_rows = col_counts[cards[i].colonna];
+        }
     }
 
     // realizza una tabella di puntatori a card organizzata per colonne
     Card *col_cards[NUM_COLS][MAX_CARDS] = {0};
+
     int col_index[NUM_COLS] = {0};
     for (int i = 0; i < num_cards; i++) {
         Colonna col = cards[i].colonna;
@@ -446,37 +492,47 @@ void stampa_lavagna() {
 
     // stampa le card
     for (int row = 0; row < max_rows; row++) {
-        // 2 righe per card
-        for (int l = 0; l < 3; l++) {
+
+        // 3 righe per card
+        for (int r = 0; r < 3; r++) {
             for (int c = 0; c < NUM_COLS; c++) {
-                if (row < col_index[c]) {
+                if (row < col_index[c] && r < 2) {
+                    // ottieni la card
                     Card *card = col_cards[c][row];
-                    char buf[COL_WIDTH + 1];
 
-                    switch (l) {
-                    // colonna 0: testo
-                    case 0:
-                        strncpy(buf, card->testo, COL_WIDTH);
-                        printf("%-*s", COL_WIDTH, buf);
-                        break;
+                    switch (r) {
+                        // riga 0: testo
+                        case 0: {
+                            // buffer per testo
+                            char buf[COL_WIDTH + 1];
 
-                    // colonna 1: altri dati
-                    case 1:
-                        snprintf(buf, sizeof(buf), "ID:%d Client:%d %02d-%02d-%04d %02d:%02d:%02d", card->id,
-                                 card->client, card->timestamp.tm_mday, card->timestamp.tm_mon + 1,
-                                 card->timestamp.tm_year + 1900, card->timestamp.tm_hour, card->timestamp.tm_min,
-                                 card->timestamp.tm_sec);
+                            // scrivi testo nel buffer
+                            strncpy(buf, card->testo, COL_WIDTH);
 
-                        buf[COL_WIDTH] = '\0';
-                        printf("%-*s", COL_WIDTH, buf);
-                        break;
+                            // stampa buffer
+                            printf("%-*s", COL_WIDTH, buf);
+                            break;
+                        }
+                        // riga 1: altri dati
+                        case 1: {
+                            // buffer per timestamp
+                            char timebuf[32];
+                            // buffer per dati
+                            char buf[COL_WIDTH + 1];
 
-                    // colonna 2: spazio vuoto
-                    case 2:
-                        printf("%-*s", COL_WIDTH, ""); // vuoto
+                            // scrivi timestamp nel buffer
+                            strftime(timebuf, sizeof(timebuf), "%d-%m-%Y %H:%M:%S", &card->timestamp);
+                            // scrivi dati nel buffer
+                            snprintf(buf, sizeof(buf), "ID: %d Client: %d %s", card->id, card->port, timebuf);
+
+                            // stampa buffer
+                            printf("%-*s", COL_WIDTH, buf);
+                            break;
+                        }
                     }
                 } else {
-                    printf("%-*s", COL_WIDTH, ""); // vuoto
+                    // vuoto
+                    printf("%-*s", COL_WIDTH, "");
                 }
             }
 
@@ -484,112 +540,122 @@ void stampa_lavagna() {
         }
     }
 
-    // stampa log
+    // stampa gli eventi
     stampa_header("LOG", COL_WIDTH * 3);
     printf("\n");
     stampa_eventi();
 }
 
+// gestisce un comando inviato da un certo client
 void gestisci_comando(const Command *cmd, unsigned short port) {
     // ottieni l'utente che ha inviato il comando
     User *user = controlla_user(port);
 
     // controlla che sia registrato o che si stia registrando adesso
     if (user == NULL && cmd->type != HELLO) {
-        log_evento("Ottenuto comando non HELLO (%d) da client non registrato %d\n", cmd->type, port);
+        log_evento("Ottenuto comando %s da client non registrato %d\n", cmdtype_to_str(cmd->type), port);
+
+        // aggiorna interfaccia
+        stampa_lavagna();
         return;
     }
 
-    int ret = -1;
+    // conterrà il valore di ritorno
+    int ret;
 
     switch (cmd->type) {
-    case CREATE_CARD: {
-        if (get_argc(cmd) < 3) {
-            break;
-        }
-
-        // ottieni argomenti
-        int id = atoi(cmd->args[0]);
-        Colonna colonna = str_to_col(cmd->args[1]);
-
-        // copia tutti gli ultimi argomenti nel testo
-        char testo[MAX_TESTO];
-        char *pun = testo;
-        int argc = get_argc(cmd);
-
-        for (int i = 2; i < argc; i++) {
-            const char *arg = cmd->args[i];
-            size_t len = strlen(arg);
-
-            // nel caso di overflow esci
-            if ((pun - testo) + len >= MAX_TESTO - 1)
+        case CREATE_CARD: {
+            if (get_argc(cmd) < 3) {
                 break;
-
-            strcpy(pun, arg);
-            pun += len;
-
-            if (i != argc - 1 && (pun - testo) < MAX_TESTO - 1) {
-                *pun++ = ' ';
             }
-        }
 
-        // termina il testo
-        *pun = '\0';
+            // ottieni argomenti
+            int id = atoi(cmd->args[0]);
+            Colonna colonna = str_to_col(cmd->args[1]);
 
-        ret = create_card(id, colonna, testo);
-        break;
-    }
-    case HELLO: {
-        ret = hello(port); // port e non user perché non è ancora registrato
-        break;
-    }
-    case QUIT: {
-        ret = quit(user);
-        break;
-    }
-    case PONG_LAVAGNA: {
-        ret = pong_lavagna(user);
-        break;
-    }
-    case ACK_CARD: {
-        if (get_argc(cmd) < 1) {
+            // copia tutti gli ultimi argomenti nel testo
+            char testo[MAX_TESTO];
+            char *pun = testo;
+            int argc = get_argc(cmd);
+
+            for (int i = 2; i < argc; i++) {
+                const char *arg = cmd->args[i];
+                size_t len = strlen(arg);
+
+                // nel caso di overflow esci
+                if ((pun - testo) + len >= MAX_TESTO - 1)
+                    break;
+
+                strcpy(pun, arg);
+                pun += len;
+
+                if (i != argc - 1 && (pun - testo) < MAX_TESTO - 1) {
+                    *pun++ = ' ';
+                }
+            }
+
+            // termina il testo
+            *pun = '\0';
+
+            ret = create_card(id, colonna, testo);
             break;
         }
-
-        // ottieni argomenti
-        int card_id = atoi(cmd->args[0]);
-
-        ret = ack_card(user, card_id);
-        break;
-    }
-    case REQUEST_USER_LIST: {
-        ret = request_user_list(user);
-        break;
-    }
-    case CARD_DONE: {
-        if (get_argc(cmd) < 1) {
+        case HELLO: {
+            ret = hello(port); // port e non user perché non è ancora registrato
             break;
         }
+        case QUIT: {
+            ret = quit(user);
+            break;
+        }
+        case PONG_LAVAGNA: {
+            ret = pong_lavagna(user);
+            break;
+        }
+        case ACK_CARD: {
+            if (get_argc(cmd) < 1) {
+                break;
+            }
 
-        // ottieni argomenti
-        int card_id = atoi(cmd->args[0]);
+            // ottieni argomenti
+            int card_id = atoi(cmd->args[0]);
 
-        ret = card_done(user, card_id);
-        break;
+            ret = ack_card(user, card_id);
+            break;
+        }
+        case REQUEST_USER_LIST: {
+            ret = request_user_list(user);
+            break;
+        }
+        case CARD_DONE: {
+            if (get_argc(cmd) < 1) {
+                break;
+            }
+
+            // ottieni argomenti
+            int card_id = atoi(cmd->args[0]);
+
+            ret = card_done(user, card_id);
+            break;
+        }
+        default: {
+            ret = -1;
+            errore = "comando inesistente";
+            break;
+        }
     }
-    default:
-        break;
-    }
 
-    // se c'è stato errore ripoortalo
+    // se c'è stato errore riportalo
     if (ret < 0) {
-        log_evento("Errore nell'esecuzione del comando %d del client %d\n", cmd->type, port);
+        log_evento("Errore nell'esecuzione del comando %s del client %d: %s\n", cmdtype_to_str(cmd->type), port,
+                   errore);
     }
 
     // aggiorna interfaccia
     stampa_lavagna();
 }
 
+// inizializza la lavagna con le prime 10 card
 void init_lavagna() {
     // crea le prime 10 card
     create_card(1, TO_DO, "Implementare integrazione per il pagamento");

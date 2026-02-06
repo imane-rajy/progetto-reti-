@@ -5,9 +5,11 @@ ColumnLimit: 120
 BasedOnStyle: LLVM
 
 AllowShortFunctionsOnASingleLine: None
-AllowShortIfStatementsOnASingleLine: false
-AllowShortBlocksOnASingleLine: false 
+AllowShortBlocksOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: Never
 
 AlwaysBreakAfterDefinitionReturnType: None
 BraceWrapping:
   AfterControlStatement: Always
+
+IndentCaseLabels: true

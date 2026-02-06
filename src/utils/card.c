@@ -6,6 +6,7 @@
 
 const char *col_names[] = {"TO_DO", "DOING", "DONE"};
 
+// passa da stringa a colonna
 Colonna str_to_col(const char *str) {
     for (int i = 0; i < NUM_COLS; i++) {
         // controlla tutte le colonne
@@ -17,10 +18,12 @@ Colonna str_to_col(const char *str) {
     return 0;
 }
 
+// passa da colonna a stringa
 const char *col_to_str(Colonna id) {
     return col_names[id];
 }
 
+// mette una card su un comando
 void card_to_cmd(const Card *c, Command *cm) {
     // inizializza buffer statici
     static char id[16], col[8], user[16];
@@ -30,7 +33,7 @@ void card_to_cmd(const Card *c, Command *cm) {
     // stampa dati sui buffer
     snprintf(id, sizeof(id), "%d", c->id);
     snprintf(col, sizeof(col), "%d", c->colonna);
-    snprintf(user, sizeof(user), "%d", c->client);
+    snprintf(user, sizeof(user), "%d", c->port);
 
     snprintf(date, sizeof(date), "%02d-%02d-%04d", c->timestamp.tm_mday, c->timestamp.tm_mon + 1,
              c->timestamp.tm_year + 1900);
@@ -50,6 +53,7 @@ void card_to_cmd(const Card *c, Command *cm) {
     cm->args[5] = testo;
 }
 
+// prende una card da un comando
 int cmd_to_card(const Command *cm, Card *c) {
     // controlla che ci siano abbastanza argomenti
     if (get_argc(cm) < 6)
@@ -58,7 +62,7 @@ int cmd_to_card(const Command *cm, Card *c) {
     // prendi campi banali
     c->id = atoi(cm->args[0]);
     c->colonna = (Colonna)atoi(cm->args[1]);
-    c->client = atoi(cm->args[2]);
+    c->port = atoi(cm->args[2]);
 
     // inizializza campi della data
     int day, mon, year, hour, min, sec;
@@ -101,6 +105,7 @@ int cmd_to_card(const Command *cm, Card *c) {
     return 0;
 }
 
+// imposta il timestamp di una card alla data/ora corrente
 void timestamp_card(Card *card) {
     time_t now = time(NULL);
     card->timestamp = *localtime(&now);
