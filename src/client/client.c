@@ -434,7 +434,7 @@ int main(int argc, char *argv[]) {
     // prendi porta
     unsigned short port = atoi(argv[1]);
 
-    if (port < 5679 || port > 5679 + MAX_USERS) {
+    if (port < 5679 || port >= 5679 + MAX_USERS) {
         fprintf(stderr, "Errore: la porta deve essere compresa tra %d e %d\n", 5679, 5679 + MAX_USERS);
         return 1;
     }
