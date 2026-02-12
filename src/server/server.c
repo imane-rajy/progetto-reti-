@@ -23,6 +23,7 @@ typedef struct {
     int sock;
     unsigned short port;
     pthread_mutex_t sock_m;
+    RecvState state;
 } Client;
 
 // array di connessioni dei client al server
@@ -50,6 +51,7 @@ int inserisci_client(int sock, unsigned short port) {
             // è libero, inizializza qui
             clients[i].sock = sock;
             clients[i].port = port;
+            clients[i].state.start = clients[i].state.end = 0;  
             pthread_mutex_init(&clients[i].sock_m, NULL);
             num_clients++;
 
@@ -74,6 +76,8 @@ void rimuovi_client(int sock) {
             // questo è il client, ripuliscilo
             clients[i].sock = 0;
             clients[i].port = 0;
+            clients[i].state.start = 0;
+            clients[i].state.end = 0;
             pthread_mutex_destroy(&clients[i].sock_m);
             num_clients--;
 
@@ -84,23 +88,23 @@ void rimuovi_client(int sock) {
     pthread_mutex_unlock(&server_client_m); // sblocca clients
 }
 
-// ottiene la porta di un client a partire dal socket che lo serve
-unsigned short get_port(int sock) {
+// ottiene un client a partire dal socket che lo serve
+Client* get_client(int sock) {
     pthread_mutex_lock(&server_client_m); // blocca clients
 
     // scansiona l'array di client
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (clients[i].sock == sock) {
             // questo è il client, restituisci la sua porta
-            unsigned short port = clients[i].port;
+            Client* client = &clients[i];
 
             pthread_mutex_unlock(&server_client_m);
-            return port;
+            return client;
         }
     }
 
     pthread_mutex_unlock(&server_client_m); // sblocca clients
-    return 0;
+    return NULL;
 }
 
 // invia un comando ad un client identificato dalla sua porta
@@ -205,11 +209,11 @@ void *select_thread(void *arg __attribute__((unused))) {
                 int client_sock = i;
 
                 // ottieni la porta del client
-                unsigned short client_port = get_port(client_sock);
+                Client* client = get_client(client_sock);
 
                 // ricevi dal client
                 Command cmd = {0};
-                int ret = recv_command(&cmd, client_sock, NULL);
+                int ret = recv_command(&cmd, client_sock, NULL, &client->state);
                 if (ret < 0) {
                     log_evento("Errore nella recv: %s\n", strerror(errno));
                     continue;
@@ -234,12 +238,12 @@ void *select_thread(void *arg __attribute__((unused))) {
                         }
                     }
 
-                    log_evento("Client %d disconnesso\n", client_port);
+                    log_evento("Client %d disconnesso\n", client->port);
                     continue;
                 }
 
                 // altrimenti gestisci il comando
-                gestisci_comando(&cmd, client_port); // lavagna.c
+                gestisci_comando(&cmd, client->port); // lavagna.c
             }
         }
     }

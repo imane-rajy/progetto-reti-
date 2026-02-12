@@ -56,7 +56,7 @@ void card_to_cmd(const Card *c, Command *cm) {
 // prende una card da un comando
 int cmd_to_card(const Command *cm, Card *c) {
     // controlla che ci siano abbastanza argomenti
-    if (get_argc(cm) < 6)
+    if (get_num_args(cm) < 6)
         return -1;
 
     // prendi campi banali
@@ -81,7 +81,7 @@ int cmd_to_card(const Command *cm, Card *c) {
 
     // copia tutti gli ultimi argomenti nel testo
     char *pun = c->testo;
-    int argc = get_argc(cm);
+    int argc = get_num_args(cm);
 
     for (int i = 5; i < argc; i++) {
         const char *arg = cm->args[i];

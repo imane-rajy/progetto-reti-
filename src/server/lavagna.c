@@ -565,7 +565,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
 
     switch (cmd->type) {
         case CREATE_CARD: {
-            if (get_argc(cmd) < 3) {
+            if (get_num_args(cmd) < 3) {
                 break;
             }
 
@@ -576,7 +576,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
             // copia tutti gli ultimi argomenti nel testo
             char testo[MAX_TESTO];
             char *pun = testo;
-            int argc = get_argc(cmd);
+            int argc = get_num_args(cmd);
 
             for (int i = 2; i < argc; i++) {
                 const char *arg = cmd->args[i];
@@ -613,7 +613,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
             break;
         }
         case ACK_CARD: {
-            if (get_argc(cmd) < 1) {
+            if (get_num_args(cmd) < 1) {
                 break;
             }
 
@@ -628,7 +628,7 @@ void gestisci_comando(const Command *cmd, unsigned short port) {
             break;
         }
         case CARD_DONE: {
-            if (get_argc(cmd) < 1) {
+            if (get_num_args(cmd) < 1) {
                 break;
             }
 

@@ -24,11 +24,18 @@ typedef enum {
 
     // client -> client
     REVIEW_CARD,
-    ACK_REVIEW_CARD
+    ACK_REVIEW
 } CommandType;
 
+
+// rappresenta lo stato di ricezione dei comandi per ogni client
+typedef struct {
+    char buf[1024]; // buffer di ricezione
+    int start;      // inizio dati validi
+    int end;        // fine dati validi
+} RecvState;
 // macro per il numero di tipi di comando
-#define NUM_CMD_TYPES (ACK_REVIEW_CARD + 1)
+#define NUM_CMD_TYPES (ACK_REVIEW + 1)
 
 // passa da stringa a tipo di comando
 CommandType str_to_cmdtype(const char *keyword);
@@ -49,19 +56,19 @@ typedef struct {
 } Command;
 
 // ottiene il numero di argomenti di un comando
-int get_argc(const Command *cm);
+int get_num_args(const Command *cm);
 
 // mette un comando come stringa su un buffer
-void cmd_to_buf(const Command *cm, char *buf);
+void command_to_buf(const Command *cm, char *buf);
 
 // prende un comando come stringa da un buffer
-void buf_to_cmd(char *buf, Command *cm);
+void buf_to_command(char *buf, Command *cm);
 
 // invia un comando su un socket TCP, bloccando un mutex se fornito
 int send_command(const Command *cm, int sock, pthread_mutex_t *m);
 
 // riceve un comando da un socket TCP, bloccando un mutex se fornito
-int recv_command(Command *cm, int sock, pthread_mutex_t *m);
+int recv_command(Command *cm, int sock, pthread_mutex_t *m, RecvState* state);
 
 // invia un comando su un socket UDP
 int sendto_command(const Command *cm, int sock, const struct sockaddr_in *addr);

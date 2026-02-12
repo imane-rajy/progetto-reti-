@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -23,6 +24,9 @@
 
 // tempo massimo di attesa prima del CARD_DONE
 #define MAX_SLEEP_TIME 5
+
+// numero di porta da cui partono gli utenti
+#define MIN_PORT_USERS 5679
 
 // numero massimo di utenti registrati
 #define MAX_USERS 30
@@ -46,7 +50,7 @@ pthread_t t_listener;
 volatile int registered = 0;
 
 // flag che rappresenta se il client è in esecuzione
-volatile int running = 1;
+atomic_int running = 1;
 
 // logica di revisione
 
@@ -76,7 +80,7 @@ int send_request(unsigned short port) {
 // risponde ad una richiesta di revisione di un peer
 int send_review(unsigned short port) {
     // prepara risposta alla revisione
-    Command rev = {.type = ACK_REVIEW_CARD};
+    Command rev = {.type = ACK_REVIEW};
 
     // specifica la porta del peer
     peer_addr.sin_port = htons(port);
@@ -124,7 +128,7 @@ int pong_lavagna() {
 int recv_con_ping(Command *cm) {
     while (1) {
         // ricevi un comando
-        int ret = recv_command(cm, server_sock, NULL);
+        int ret = recv_command(cm, server_sock, NULL, NULL);
 
         // se c'è un errore o non è PING, restituisci
         if (ret < 0 || cm->type != PING_USER)
@@ -156,7 +160,7 @@ int get_user_list(unsigned short users[MAX_USERS - 1], int *num_users) {
 
     // deserializza lista
     *num_users = 0;
-    for (int i = 0; i < get_argc(&cmd); i++) {
+    for (int i = 0; i < get_num_args(&cmd); i++) {
         int cl = atoi(cmd.args[i]);
 
         if (cl != 0) {
@@ -279,7 +283,7 @@ void stampa_interfaccia() {
 
 // thread di ascolto, gestisce il ciclo delle card
 void *listener_thread(void *arg __attribute__((unused))) {
-    while (running) {
+    while (atomic_load(&running)) {
         // array per gli indici degli utenti
         unsigned short users[MAX_USERS - 1];
 
@@ -289,7 +293,7 @@ void *listener_thread(void *arg __attribute__((unused))) {
         // ottieni card dal server
         int id = get_card(users, &num_users);
         if (id < 0) {
-            running = 0;
+            atomic_store(&running, 0);
             break;
         }
 
@@ -301,7 +305,7 @@ void *listener_thread(void *arg __attribute__((unused))) {
             // ottieni lista utente
             int ret = request_user_list(users, &num_users);
             if (ret < 0) {
-                running = 0;
+                atomic_store(&running, 0);
                 break;
             }
 
@@ -330,7 +334,7 @@ void *listener_thread(void *arg __attribute__((unused))) {
 
 // thread console, gestisce i comandi da tastiera
 void *console_thread(void *arg __attribute__((unused))) {
-    while (running) {
+    while (atomic_load(&running)) {
         // aggiorna interfaccia
         stampa_interfaccia();
 
@@ -348,7 +352,7 @@ void *console_thread(void *arg __attribute__((unused))) {
 
         // interpreta comando
         Command cmd = {0};
-        buf_to_cmd(buffer, &cmd);
+        buf_to_command(buffer, &cmd);
 
         // se di HELLO, assumi che sia registrato
         if (cmd.type == HELLO) {
@@ -371,7 +375,7 @@ void *console_thread(void *arg __attribute__((unused))) {
         // invia il comando
         if (send_command(&cmd, server_sock, &server_client_m) < 0) {
             perror("Errore nella send");
-            running = 0;
+            atomic_store(&running, 0);
             break;
         }
     }
@@ -381,7 +385,7 @@ void *console_thread(void *arg __attribute__((unused))) {
 
 // thread review, gestisce le review fra peer
 void *review_thread(void *arg __attribute__((unused))) {
-    while (running) {
+    while (atomic_load(&running)) {
         // comando che conterrà le richieste
         Command cmd = {0};
 
@@ -400,7 +404,7 @@ void *review_thread(void *arg __attribute__((unused))) {
                 // ci è stata chiesta una review, rispondi
                 send_review(port);
                 break;
-            case ACK_REVIEW_CARD: {
+            case ACK_REVIEW: {
                 pthread_mutex_lock(&review_m); // blocca il contatore
 
                 // questo è di interesse a get_review, segnala
@@ -429,6 +433,11 @@ int main(int argc, char *argv[]) {
 
     // prendi porta
     unsigned short port = atoi(argv[1]);
+
+    if (port < 5679 || port > 5679 + MAX_USERS) {
+        fprintf(stderr, "Errore: la porta deve essere compresa tra %d e %d\n", 5679, 5679 + MAX_USERS);
+        return 1;
+    }
 
     // inizializza rand
     srand(time(NULL) ^ port);
